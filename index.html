@@ -13,16 +13,15 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>" />
 </head>
 <body>
+<div id="boot" aria-hidden="true">
+  <div class="boot-lockup">
+    <img class="boot-mark" src="assets/polite-carrot-logo.svg" alt="" />
+    <img class="boot-name" src="assets/polite-carrot-name.svg" alt="" />
+  </div>
+</div>
+
 <div id="app">
   <canvas id="scene"></canvas>
-
-  <!-- ------------------------------------------------------- loading -->
-  <section id="loading" class="screen solid">
-    <div class="loader">
-      <div class="loader-hay">🌾</div>
-      <p>Opening the barn…</p>
-    </div>
-  </section>
 
   <!-- ---------------------------------------------------- main menu -->
   <section id="menu" class="screen" aria-hidden="true">
@@ -144,6 +143,31 @@
   </section>
 </div>
 
+<script>
+/* Polite Carrot boot lockup — same treatment as Color Match & Merge and Tide
+   Runner. It holds for the house beat, waits for the barn to finish building
+   so the first frame is never a half-built scene, and hard-caps at 4s. */
+(function () {
+  var boot = document.getElementById('boot');
+  if (!boot) return;
+  var held = false, ready = false;
+
+  function dismissBoot() {
+    if (boot.classList.contains('done')) return;
+    boot.classList.add('done');
+    boot.addEventListener('transitionend', function () { boot.remove(); }, { once: true });
+    setTimeout(function () { if (boot.isConnected) boot.remove(); }, 700);
+  }
+  function maybeDismiss() { if (held && ready) dismissBoot(); }
+
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('load', function () {
+    setTimeout(function () { held = true; maybeDismiss(); }, reduced ? 100 : 1350);
+  }, { once: true });
+  setTimeout(dismissBoot, 4000);
+  window.politeCarrotBootReady = function () { ready = true; maybeDismiss(); };
+})();
+</script>
 <script src="vendor/three.min.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>

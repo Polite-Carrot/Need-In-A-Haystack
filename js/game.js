@@ -693,10 +693,12 @@ NIAH.game = (function () {
     bindInput(canvas);
 
     phase = 'menu';
-    NIAH.ui.screen('loading', false);
     NIAH.ui.screen('menu', true);
     lastTime = performance.now();
     requestAnimationFrame(frame);
+    // the barn is built and the first frame is scheduled — let the boot
+    // lockup fade once it has had its beat
+    if (window.politeCarrotBootReady) window.politeCarrotBootReady();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

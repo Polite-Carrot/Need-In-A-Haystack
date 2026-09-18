@@ -42,6 +42,9 @@ network calls, no dependencies to install.
   keep digging while you walk, and the detector.
 - Main menu, pause menu, first-person / follow camera toggle, synthesised sound
   effects (no audio files), and autosave to `localStorage`.
+- The shared **Polite Carrot boot lockup** on startup, ported from Color Match &
+  Merge and Tide Runner so every title opens the same way. It holds for the house
+  beat, waits for the barn to finish building, and hard-caps at 4s.
 
 ## Balance
 
@@ -79,6 +82,7 @@ pick **`main`** and **`/ (root)`**.
 | `js/game.js` | State, economy, barn flow, digging, input, save/load |
 | `js/ui.js` | Screens, HUD, shop rendering |
 | `js/audio.js` | WebAudio sound effects |
+| `assets/` | Polite Carrot logo and wordmark for the boot lockup |
 | `vendor/three.min.js` | three.js r160 (MIT, see `vendor/three.LICENSE`) |
 
 The original 2D tap version lives in this repo's git history, before the 3D rework.

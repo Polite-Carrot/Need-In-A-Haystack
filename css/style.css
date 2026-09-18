@@ -70,11 +70,54 @@ html, body {
 .card h2 { margin: 0 0 14px; font-size: 22px; }
 .card p { font-size: 13.5px; font-weight: 600; line-height: 1.55; opacity: .9; margin: 0 0 14px; }
 
-/* ---------------------------------------------------------- loading */
-.loader { text-align: center; }
-.loader-hay { font-size: 54px; animation: sway 1.4s ease-in-out infinite; }
-.loader p { font-size: 14px; opacity: .7; margin-top: 10px; }
-@keyframes sway { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+/* ------------------------------------------------ startup identity */
+/* Ported from the other Polite Carrot games so every title boots the same. */
+#boot {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 100;
+  background: #000;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.55s ease;
+}
+#boot.done { opacity: 0; }
+.boot-lockup {
+  display: grid;
+  justify-items: center;
+  width: min(68vw, 52vh, 360px);
+}
+.boot-mark {
+  display: block;
+  width: 92%;
+  height: auto;
+  opacity: 0;
+  transform: scale(0.94);
+  animation: boot-logo 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s forwards;
+}
+.boot-name {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 12px;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: boot-name 0.55s ease 0.72s forwards;
+}
+@keyframes boot-logo {
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes boot-name {
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot-mark,
+  .boot-name { animation-duration: 0.01ms; }
+}
 
 /* ------------------------------------------------------------- menu */
 #menu {

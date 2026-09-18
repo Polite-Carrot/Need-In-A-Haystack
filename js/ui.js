@@ -17,7 +17,7 @@ NIAH.ui = (function () {
 
   function init() {
     [
-      'loading', 'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win',
+      'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win',
       'coinBox', 'coinCount', 'hudLevel', 'senseLine', 'pileCard', 'pileName', 'pileSearched',
       'pileFill', 'shovelName', 'loadText', 'loadFill', 'prompt', 'shopBody', 'shopCoins',
       'shopDot', 'stick', 'stickKnob', 'actionBtn', 'introNumber', 'introSub', 'statsList',
