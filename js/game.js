@@ -50,12 +50,15 @@ NIAH.game = (function () {
     started: Date.now(),
     camera: 'follow',
     muted: false,
+    look: { outfit: 'farmhand', hat: 'straw', shovel: 'auto' },
+    wardrobe: { outfit: ['farmhand'], hat: ['straw'], shovel: ['auto'] },
   };
 
   let phase = 'boot';            // boot | menu | intro | play | paused | win
   const input = { x: 0, y: 0 };
   let held = false, lastTime = 0, elapsed = 0;
   let digSfx = 0, saveTimer = 0, handBank = 0, senseTimer = 0, actionLock = 0, stickActive = false;
+  let wardrobeReturn = null;
   const intro = { t: 0, done: false };
   const keys = Object.create(null);
   const tmpV = new T.Vector3();
@@ -91,6 +94,15 @@ NIAH.game = (function () {
   function applySave(data) {
     Object.assign(state, data);
     state.gear = Object.assign({ boots: 0, sense: 0, sift: 0, hands: 0 }, data.gear || {});
+    // saves from before My Farmer arrive without a wardrobe
+    state.look = Object.assign({ outfit: 'farmhand', hat: 'straw', shovel: 'auto' }, data.look || {});
+    state.wardrobe = Object.assign({ outfit: ['farmhand'], hat: ['straw'], shovel: ['auto'] }, data.wardrobe || {});
+    ['outfit', 'hat', 'shovel'].forEach((kind) => {
+      if (!Array.isArray(state.wardrobe[kind]) || !state.wardrobe[kind].length) {
+        state.wardrobe[kind] = [NIAH.cosmetics.listFor(kind)[0].id];
+      }
+      if (!state.wardrobe[kind].includes(state.look[kind])) state.look[kind] = state.wardrobe[kind][0];
+    });
     if (!Array.isArray(state.owned) || !state.owned.length) state.owned = [0];
     state.shovel = Math.max(0, Math.min(D.SHOVELS.length - 1, state.shovel | 0));
     NIAH.audio.muted = !!state.muted;
@@ -127,7 +139,7 @@ NIAH.game = (function () {
     lv.piles.forEach((p, i) => NIAH.world.setPileVisual(NIAH.world.piles[i], p.hay / p.total));
     NIAH.world.setCartFill(0);
     NIAH.world.setNeedleGlow(state.gear.sense >= 3 ? NIAH.world.piles[lv.needlePile] : null);
-    NIAH.player.setShovelLook(state.shovel);
+    NIAH.player.applyLook(state.look, state.shovel);
     NIAH.player.setLoadVisual(lv.loadTotal / capacity());   // a resumed save can arrive mid-load
   }
 
@@ -422,7 +434,7 @@ NIAH.game = (function () {
     const sh = D.SHOVELS[i];
     if (state.owned.includes(i)) {
       state.shovel = i;
-      NIAH.player.setShovelLook(i);
+      NIAH.player.applyLook(state.look, i);
       if (state.lv && state.lv.loadTotal > capacity()) trimLoad();
       NIAH.audio.buy();
     } else {
@@ -430,7 +442,7 @@ NIAH.game = (function () {
       state.coins -= sh.price;
       state.owned.push(i);
       state.shovel = i;
-      NIAH.player.setShovelLook(i);
+      NIAH.player.applyLook(state.look, i);
       NIAH.audio.buy();
     }
     save();
@@ -466,6 +478,66 @@ NIAH.game = (function () {
     NIAH.ui.renderShop(true);
   }
 
+  /* --------------------------------------------------------- My Farmer */
+
+  function ownsCosmetic(kind, id) {
+    return (state.wardrobe[kind] || []).includes(id);
+  }
+
+  function cosmeticLocked(kind, id) {
+    const item = NIAH.cosmetics.byId(NIAH.cosmetics.listFor(kind), id);
+    return !!item.unlock && state.level < item.unlock;
+  }
+
+  function buyCosmetic(kind, id) {
+    const item = NIAH.cosmetics.byId(NIAH.cosmetics.listFor(kind), id);
+    if (!ownsCosmetic(kind, id)) {
+      if (cosmeticLocked(kind, id) || state.coins < item.price) { NIAH.audio.nope(); return; }
+      state.coins -= item.price;
+      state.wardrobe[kind].push(id);
+    }
+    state.look[kind] = id;
+    NIAH.player.applyLook(state.look, state.shovel);
+    NIAH.wardrobe.preview(state.look, state.shovel);
+    if (state.lv) NIAH.player.setLoadVisual(state.lv.loadTotal / capacity());
+    NIAH.audio.buy();
+    save();
+    NIAH.ui.renderWardrobe(true);
+  }
+
+  function openWardrobe() {
+    if (phase === 'wardrobe') return;
+    wardrobeReturn = phase;
+    phase = 'wardrobe';
+    NIAH.wardrobe.open(state.look, state.shovel);
+    NIAH.ui.closeShop();
+    NIAH.ui.screen('menu', false);
+    NIAH.ui.screen('pause', false);
+    NIAH.ui.screen('win', false);
+    NIAH.ui.hudOn(false);
+    NIAH.ui.screen('wardrobe', true);
+    NIAH.ui.renderWardrobe(true);
+    NIAH.audio.ui();
+  }
+
+  function closeWardrobe() {
+    NIAH.ui.screen('wardrobe', false);
+    const back = wardrobeReturn || 'menu';
+    wardrobeReturn = null;
+    if (back === 'menu') {
+      phase = 'menu';
+      NIAH.ui.setMenu(readSave());
+      NIAH.ui.screen('menu', true);
+    } else if (back === 'win') {
+      phase = 'win';
+      NIAH.ui.screen('win', true);
+    } else {
+      phase = 'paused';
+      NIAH.ui.screen('pause', true);
+    }
+    save();
+  }
+
   function toggleSound() {
     NIAH.audio.muted = !NIAH.audio.muted;
     state.muted = NIAH.audio.muted;
@@ -486,6 +558,7 @@ NIAH.game = (function () {
     if (phase === 'intro') { updateIntro(dt); return; }
     if (phase !== 'play') {
       if (phase === 'menu') updateMenuCamera(dt);
+      if (phase === 'wardrobe') NIAH.wardrobe.update(dt);
       return;
     }
 
@@ -553,8 +626,12 @@ NIAH.game = (function () {
     lastTime = now;
     elapsed += dt;
     update(dt);
-    NIAH.world.update(dt, elapsed);
-    NIAH.world.render();
+    if (phase === 'wardrobe') {
+      NIAH.wardrobe.render();
+    } else {
+      NIAH.world.update(dt, elapsed);
+      NIAH.world.render();
+    }
     requestAnimationFrame(frame);
   }
 
@@ -588,7 +665,12 @@ NIAH.game = (function () {
       if (e.repeat) return;
       keys[e.code] = true;
       if (e.code === 'Space' || e.code === 'KeyE') { e.preventDefault(); actionPress(); }
-      if (e.code === 'Escape') { e.preventDefault(); phase === 'paused' ? pause(false) : pause(true); }
+      if (e.code === 'Escape') {
+        e.preventDefault();
+        if (phase === 'wardrobe') closeWardrobe();
+        else if (phase === 'paused') pause(false);
+        else pause(true);
+      }
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if (phase === 'play' || phase === 'intro') NIAH.audio.wake();
     });
@@ -707,6 +789,7 @@ NIAH.game = (function () {
   return {
     state, startNewGame, continueGame, nextBarn, quitToMenu, pause, skipIntro,
     buyShovel, buyGear, gearPrice, toggleSound, toggleCamera, wipeSave,
+    openWardrobe, closeWardrobe, buyCosmetic, ownsCosmetic, cosmeticLocked,
     capacity, digRate, coinsPerHay, moveSpeed,
     get phase() { return phase; },
   };

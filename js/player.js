@@ -18,7 +18,7 @@ NIAH.player = (function () {
 
   const CARRY = -2.45;   // shaft over the shoulder, blade up, when not digging
   const parts = {};
-  let group = null;
+  let group = null, playerRig = null;
   const pos = new T.Vector3();
   const vel = new T.Vector3();
   let yaw = Math.PI;               // facing -Z is "into the barn"
@@ -28,79 +28,80 @@ NIAH.player = (function () {
 
   /* ----------------------------------------------------------- build */
 
-  function create(scene) {
-    group = new T.Group();
+  /* Builds one farmhand rig. The player uses one; the wardrobe preview uses
+     another, so this returns the rig rather than keeping a singleton. */
+  function buildRig() {
+    const g = new T.Group();
+    const p = { shirtMeshes: [], trouserMeshes: [] };
 
     const hips = new T.Group();
     hips.position.y = 0.95;
-    group.add(hips);
-    parts.hips = hips;
+    g.add(hips);
+    p.hips = hips;
 
     const torso = new T.Mesh(new T.BoxGeometry(0.8, 0.95, 0.46), MAT.denim);
     torso.position.y = 0.48;
     hips.add(torso);
+    p.trouserMeshes.push(torso);
+
     const chest = new T.Mesh(new T.BoxGeometry(0.84, 0.42, 0.5), MAT.shirt);
     chest.position.y = 0.82;
     hips.add(chest);
+    p.shirtMeshes.push(chest);
 
     const head = new T.Mesh(new T.SphereGeometry(0.3, 12, 10), MAT.skin);
     head.position.y = 1.28;
     hips.add(head);
-    parts.head = head;
+    p.head = head;
 
-    const brim = new T.Mesh(new T.CylinderGeometry(0.62, 0.62, 0.07, 12), MAT.hat);
-    brim.position.y = 1.46;
-    const crown = new T.Mesh(new T.ConeGeometry(0.33, 0.36, 10), MAT.hat);
-    crown.position.y = 1.62;
-    hips.add(brim, crown);
+    // hats are built by the cosmetics module and hung off this anchor
+    const hatAnchor = new T.Group();
+    hatAnchor.position.y = 1.4;
+    hips.add(hatAnchor);
+    p.hatAnchor = hatAnchor;
+    p.hat = null;
 
     const legGeo = new T.BoxGeometry(0.3, 0.82, 0.32);
     const bootGeo = new T.BoxGeometry(0.34, 0.2, 0.44);
     ['L', 'R'].forEach((side, i) => {
-      const s = i === 0 ? -1 : 1;
+      const sx = i === 0 ? -1 : 1;
       const leg = new T.Group();
-      leg.position.set(s * 0.22, 0, 0);
+      leg.position.set(sx * 0.22, 0, 0);
       const thigh = new T.Mesh(legGeo, MAT.denim);
       thigh.position.y = -0.41;
       const boot = new T.Mesh(bootGeo, MAT.boot);
       boot.position.set(0, -0.88, 0.05);
       leg.add(thigh, boot);
       hips.add(leg);
-      parts['leg' + side] = leg;
+      p['leg' + side] = leg;
+      p.trouserMeshes.push(thigh);
 
       const arm = new T.Group();
-      arm.position.set(s * 0.52, 0.86, 0);
+      arm.position.set(sx * 0.52, 0.86, 0);
       const upper = new T.Mesh(new T.BoxGeometry(0.22, 0.78, 0.24), MAT.shirt);
       upper.position.y = -0.36;
       const hand = new T.Mesh(new T.SphereGeometry(0.14, 8, 6), MAT.skin);
       hand.position.y = -0.76;
       arm.add(upper, hand);
       hips.add(arm);
-      parts['arm' + side] = arm;
+      p['arm' + side] = arm;
+      p.shirtMeshes.push(upper);
     });
-
-    // shovel, held in the right hand
-    const shovel = new T.Group();
-    const handle = new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 1.9, 6), MAT.handle);
-    handle.position.y = -0.95;
-    const blade = new T.Mesh(new T.BoxGeometry(0.62, 0.72, 0.1), MAT.blade);
-    blade.position.y = -1.95;
-    const load = new T.Mesh(new T.BoxGeometry(0.56, 0.3, 0.3), MAT.hay);
-    load.position.y = -2.08;
-    load.scale.set(0.02, 0.02, 0.02);
-    shovel.add(handle, blade, load);
-    shovel.position.set(0.02, -0.66, 0.06);
-    shovel.rotation.set(CARRY, 0, 0.22);
-    parts.armR.add(shovel);
-    parts.shovel = shovel;
-    parts.blade = blade;
-    parts.load = load;
 
     const shadow = new T.Mesh(new T.CircleGeometry(0.62, 14), MAT.shadow);
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.04;
-    group.add(shadow);
+    g.add(shadow);
+    p.shadow = shadow;
 
+    return { group: g, parts: p };
+  }
+
+  function create(scene) {
+    const rig = buildRig();
+    group = rig.group;
+    Object.assign(parts, rig.parts);
+    playerRig = rig;
     scene.add(group);
     return group;
   }
@@ -207,6 +208,7 @@ NIAH.player = (function () {
     parts.hips.rotation.z = moving ? Math.sin(walkPhase) * 0.04 : 0;
     parts.head.rotation.y = moving ? Math.sin(walkPhase * 0.5) * 0.12 : 0;
 
+    if (!parts.shovel) return;
     if (action === 'dig') {
       digPhase += dt * 6.5;
       const d = Math.sin(digPhase);
@@ -278,19 +280,23 @@ NIAH.player = (function () {
     action = a;
   }
   function setLoadVisual(fraction) {
+    if (!parts.load) return;
     const f = Math.max(0, Math.min(1, fraction));
     const s = f <= 0.001 ? 0.02 : 0.35 + f * 0.9;
     parts.load.scale.set(s, Math.max(0.02, f * 1.3), s);
     parts.load.visible = f > 0.001;
   }
-  function setShovelLook(tier) {
-    const scale = 0.85 + Math.min(tier, 7) * 0.09;
-    parts.blade.scale.set(scale, scale, 1);
-    parts.blade.material = tier >= 6 ? MAT.blade : tier >= 3 ? MAT.blade : MAT.handle;
+  function applyLook(look, tier) {
+    if (!playerRig) return;
+    NIAH.cosmetics.applyLook(playerRig, look, tier);
+    parts.shovel = playerRig.parts.shovel;
+    parts.blade = playerRig.parts.blade;
+    parts.load = playerRig.parts.load;
+    parts.hat = playerRig.parts.hat;
   }
 
   return {
-    create, place, update, updateCamera, nudgeCamera, setAction, setLoadVisual, setShovelLook,
+    create, buildRig, place, update, updateCamera, nudgeCamera, setAction, setLoadVisual, applyLook,
     get position() { return pos; },
     get yaw() { return yaw; },
     get speed() { return speedNow; },

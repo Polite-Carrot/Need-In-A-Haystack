@@ -31,6 +31,7 @@
       <div class="menu-buttons">
         <button class="btn big" id="btnContinue" hidden>Continue — <span id="continueLabel"></span></button>
         <button class="btn big" id="btnPlay">Start digging</button>
+        <button class="btn ghost" id="btnFarmerMenu">👕 My Farmer</button>
         <button class="btn ghost" id="btnHowTo">How to play</button>
         <button class="btn ghost" id="btnMenuStats">Farm record</button>
         <button class="btn ghost danger" id="btnWipe" hidden>Erase save</button>
@@ -99,6 +100,7 @@
       <h2>Paused</h2>
       <button class="btn" id="btnResume">Back to the barn</button>
       <button class="btn ghost" id="btnPauseShop">Shop</button>
+      <button class="btn ghost" id="btnPauseFarmer">My Farmer</button>
       <button class="btn ghost" id="btnCamera">Camera: Follow</button>
       <button class="btn ghost" id="btnSound">Sound: On</button>
       <button class="btn ghost" id="btnQuit">Quit to menu</button>
@@ -130,6 +132,24 @@
     </div>
   </section>
 
+  <!-- --------------------------------------------------- my farmer -->
+  <section id="wardrobe" class="wardrobe" aria-hidden="true">
+    <div class="wardrobe-top">
+      <button class="icon-btn" id="closeWardrobe" title="Back">✕</button>
+      <h2>My Farmer</h2>
+      <div class="coins small"><span class="coin-icon">🪙</span><span id="wardrobeCoins">0</span></div>
+    </div>
+    <div class="wardrobe-panel">
+      <div class="tabs">
+        <button class="tab wtab active" data-wtab="outfit">Outfit</button>
+        <button class="tab wtab" data-wtab="hat">Hat</button>
+        <button class="tab wtab" data-wtab="shovel">Shovel</button>
+      </div>
+      <div class="wardrobe-grid" id="wardrobeGrid"></div>
+      <div class="wardrobe-foot" id="wardrobeFoot"></div>
+    </div>
+  </section>
+
   <!-- ------------------------------------------------ level complete -->
   <section id="win" class="screen dim" aria-hidden="true">
     <div class="card">
@@ -139,6 +159,7 @@
       <div class="win-stats" id="winStats"></div>
       <button class="btn big" id="btnNextBarn">On to the next barn</button>
       <button class="btn ghost" id="btnWinShop">Spend coins first</button>
+      <button class="btn ghost" id="btnWinFarmer">My Farmer</button>
     </div>
   </section>
 </div>
@@ -171,7 +192,9 @@
 <script src="vendor/three.min.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>
+<script src="js/cosmetics.js"></script>
 <script src="js/player.js"></script>
+<script src="js/wardrobe.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>
 </body>

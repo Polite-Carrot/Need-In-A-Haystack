@@ -517,9 +517,10 @@ NIAH.world = (function () {
 
   function setDoorOpen(v) { state.doorOpen = Math.max(0, Math.min(1, v)); }
   function render() { renderer.render(scene, camera); }
+  function renderTo(otherScene, otherCamera) { renderer.render(otherScene, otherCamera); }
 
   return {
-    init, resize, render, update,
+    init, resize, render, renderTo, update,
     buildLevel, layoutFor,
     setPileVisual, setCartFill, setNeedleGlow, setDoorOpen, hayBurst,
     get scene() { return scene; },
@@ -527,6 +528,7 @@ NIAH.world = (function () {
     get piles() { return state.piles; },
     get cart() { return state.cart; },
     get bounds() { return state.bounds; },
+    get canvasHeight() { return canvas ? canvas.clientHeight : 0; },
     get layout() { return state.layout; },
   };
 })();

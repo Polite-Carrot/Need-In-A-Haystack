@@ -5,6 +5,7 @@ NIAH.ui = (function () {
   const el = (id) => document.getElementById(id);
   const E = {};
   let shopTab = 'shovels', shopSig = '';
+  let wardrobeTab = 'outfit', wardrobeSig = '';
 
   const SUFFIX = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi'];
   function fmt(n) {
@@ -17,7 +18,8 @@ NIAH.ui = (function () {
 
   function init() {
     [
-      'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win',
+      'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win', 'wardrobe',
+      'wardrobeGrid', 'wardrobeCoins', 'wardrobeFoot',
       'coinBox', 'coinCount', 'hudLevel', 'senseLine', 'pileCard', 'pileName', 'pileSearched',
       'pileFill', 'shovelName', 'loadText', 'loadFill', 'prompt', 'shopBody', 'shopCoins',
       'shopDot', 'stick', 'stickKnob', 'actionBtn', 'introNumber', 'introSub', 'statsList',
@@ -35,6 +37,19 @@ NIAH.ui = (function () {
     el('closeStats').addEventListener('click', () => screen('stats', false));
     el('btnWipe').addEventListener('click', () => G().wipeSave());
     E.menuSound.addEventListener('click', () => G().toggleSound());
+
+    el('btnFarmerMenu').addEventListener('click', () => { NIAH.audio.wake(); G().openWardrobe(); });
+    el('btnPauseFarmer').addEventListener('click', () => G().openWardrobe());
+    el('btnWinFarmer').addEventListener('click', () => G().openWardrobe());
+    el('closeWardrobe').addEventListener('click', () => G().closeWardrobe());
+    document.querySelectorAll('.wtab').forEach((t) => t.addEventListener('click', () => {
+      document.querySelectorAll('.wtab').forEach((x) => x.classList.remove('active'));
+      t.classList.add('active');
+      wardrobeTab = t.dataset.wtab;
+      E.wardrobeGrid.scrollTop = 0;
+      renderWardrobe(true);
+      NIAH.audio.ui();
+    }));
 
     el('btnSkipIntro').addEventListener('click', () => G().skipIntro());
     el('btnShop').addEventListener('click', () => openShop());
@@ -57,7 +72,10 @@ NIAH.ui = (function () {
       NIAH.audio.ui();
     }));
 
-    setInterval(() => { if (E.shop.classList.contains('open')) renderShop(); }, 400);
+    setInterval(() => {
+      if (E.shop.classList.contains('open')) renderShop();
+      if (E.wardrobe.classList.contains('open')) renderWardrobe();
+    }, 400);
   }
 
   /* --------------------------------------------------------- screens */
@@ -217,6 +235,79 @@ NIAH.ui = (function () {
     body.scrollTop = scroll;
   }
 
+  /* ------------------------------------------------------- my farmer */
+
+  const KIND_BLURB = {
+    outfit: 'Shirt and trousers. Camo, flags, and one very loud pink.',
+    hat: 'Sun protection, mostly. Some of it is not.',
+    shovel: 'Looks only — your dug-per-second comes from the shop.',
+  };
+
+  function kitRow(kind, item, state) {
+    const G = NIAH.game;
+    const owned = G.ownsCosmetic(kind, item.id);
+    const worn = state.look[kind] === item.id;
+    const locked = G.cosmeticLocked(kind, item.id);
+    const canAfford = state.coins >= item.price;
+
+    const b = document.createElement('button');
+    b.className = 'kit' + (worn ? ' worn' : owned ? ' owned' : locked ? ' locked' : canAfford ? '' : ' cant');
+    b.type = 'button';
+
+    const sw = document.createElement('div');
+    sw.className = 'kit-swatch';
+    (item.swatch || ['#888']).forEach((c) => {
+      const seg = document.createElement('span');
+      seg.style.background = c;
+      sw.appendChild(seg);
+    });
+
+    const info = document.createElement('div');
+    info.className = 'kit-info';
+    const name = document.createElement('div');
+    name.className = 'kit-name';
+    name.textContent = item.name;
+    const tag = document.createElement('div');
+    if (worn) { tag.className = 'kit-tag'; tag.textContent = 'Wearing'; }
+    else if (owned) { tag.className = 'kit-tag'; tag.textContent = 'Tap to wear'; }
+    else if (locked) { tag.className = 'kit-tag locked'; tag.textContent = 'Barn ' + item.unlock; }
+    else { tag.className = 'kit-tag price'; tag.textContent = '🪙 ' + fmt(item.price); }
+    info.append(name, tag);
+
+    b.append(sw, info);
+    b.addEventListener('click', () => {
+      if (locked) { NIAH.audio.nope(); setWardrobeFoot('Clear barn ' + item.unlock + ' to unlock ' + item.name + '.'); return; }
+      if (!owned && !canAfford) {
+        NIAH.audio.nope();
+        setWardrobeFoot(fmt(item.price - state.coins) + ' more coins for ' + item.name + '.');
+        return;
+      }
+      NIAH.game.buyCosmetic(kind, item.id);
+      setWardrobeFoot(owned ? item.name + ' on.' : 'Bought ' + item.name + '. ' + item.desc);
+    });
+    return b;
+  }
+
+  function setWardrobeFoot(text) { E.wardrobeFoot.textContent = text; }
+
+  function renderWardrobe(force) {
+    const G = NIAH.game;
+    if (!G || !G.state) return;
+    const s = G.state;
+    const sig = [wardrobeTab, s.coins, s.level, JSON.stringify(s.look), JSON.stringify(s.wardrobe)].join('|');
+    if (!force && sig === wardrobeSig) return;
+    const changedTab = !wardrobeSig.startsWith(wardrobeTab + '|');
+    wardrobeSig = sig;
+
+    E.wardrobeCoins.textContent = fmt(s.coins);
+    const grid = E.wardrobeGrid;
+    const scroll = grid.scrollTop;
+    grid.innerHTML = '';
+    NIAH.cosmetics.listFor(wardrobeTab).forEach((item) => grid.appendChild(kitRow(wardrobeTab, item, s)));
+    grid.scrollTop = changedTab ? 0 : scroll;
+    if (force || changedTab) setWardrobeFoot(KIND_BLURB[wardrobeTab]);
+  }
+
   /* ----------------------------------------------------------- misc */
 
   function showStats() {
@@ -246,6 +337,7 @@ NIAH.ui = (function () {
   return {
     init, screen, hudOn, setHud, setPileCard, setPrompt, setAction, setSense, setIntro,
     setMenu, setCameraLabel, renderShop, openShop, closeShop, shopIsOpen, showStats, showWin,
+    renderWardrobe,
     bumpCoins, fmt,
     get stick() { return E.stick; },
     get stickKnob() { return E.stickKnob; },

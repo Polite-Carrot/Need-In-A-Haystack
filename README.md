@@ -40,6 +40,12 @@ network calls, no dependencies to install.
   you're standing at, then marks the pile outright at level 3.
 - **8 shovels and 4 pieces of gear**: work boots, sifting screen, farmhands who
   keep digging while you walk, and the detector.
+- **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
+  13 outfits (camo, flags, hi-vis, one very loud pink), 12 hats (caps, cowboy,
+  top hat, viking helm, a bunny head, a traffic cone, a crown) and 9 shovel
+  skins (gold, trident, giant spoon, candy cane, diamond). Cosmetic only —
+  every dig stat still comes from the shop. Patterns are drawn procedurally at
+  runtime, so there are still no image assets in the repo.
 - Main menu, pause menu, first-person / follow camera toggle, synthesised sound
   effects (no audio files), and autosave to `localStorage`.
 - The shared **Polite Carrot boot lockup** on startup, ported from Color Match &
@@ -80,7 +86,9 @@ pick **`main`** and **`/ (root)`**.
 | `js/world.js` | Renderer, barn geometry, hay piles, sifter, particles |
 | `js/player.js` | Farmhand mesh, walk/dig animation, movement, camera rig |
 | `js/game.js` | State, economy, barn flow, digging, input, save/load |
-| `js/ui.js` | Screens, HUD, shop rendering |
+| `js/ui.js` | Screens, HUD, shop and wardrobe rendering |
+| `js/cosmetics.js` | Outfits, hats, shovel skins and their procedural textures |
+| `js/wardrobe.js` | The My Farmer preview scene and its auto-framing |
 | `js/audio.js` | WebAudio sound effects |
 | `assets/` | Polite Carrot logo and wordmark for the boot lockup |
 | `vendor/three.min.js` | three.js r160 (MIT, see `vendor/three.LICENSE`) |
