@@ -4,57 +4,89 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#2b1d10" />
-<meta name="description" content="A first-person idle game about shovelling a giant haystack, one scoop at a time, until the needle turns up." />
+<meta name="description" content="A 3D barn-searching game: walk the barn, dig the right hay pile, and find the needle before the coins run dry." />
 <meta property="og:title" content="Need in a Haystack" />
-<meta property="og:description" content="Tap the haystack, fill your shovel, dump it in the pit, and buy your way up to bigger shovels until you find the needle." />
+<meta property="og:description" content="Walk into the barn, pick a pile, and dig. The needle is in one of them." />
 <meta property="og:type" content="website" />
 <title>Need in a Haystack</title>
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="css/style.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>" />
 </head>
 <body>
-<div id="game">
+<div id="app">
   <canvas id="scene"></canvas>
 
-  <!-- Top HUD -->
-  <header id="hud">
-    <div class="hud-row">
-      <div class="coins" id="coinBox">
-        <span class="coin-icon">🪙</span><span id="coinCount">0</span>
+  <!-- ------------------------------------------------------- loading -->
+  <section id="loading" class="screen solid">
+    <div class="loader">
+      <div class="loader-hay">🌾</div>
+      <p>Opening the barn…</p>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------- main menu -->
+  <section id="menu" class="screen" aria-hidden="true">
+    <div class="menu-inner">
+      <h1 class="title">Need<span class="title-in"> in a </span>Haystack</h1>
+      <p class="tagline">One barn. Several piles. One needle.</p>
+      <div class="menu-buttons">
+        <button class="btn big" id="btnContinue" hidden>Continue — <span id="continueLabel"></span></button>
+        <button class="btn big" id="btnPlay">Start digging</button>
+        <button class="btn ghost" id="btnHowTo">How to play</button>
+        <button class="btn ghost" id="btnMenuStats">Farm record</button>
+        <button class="btn ghost danger" id="btnWipe" hidden>Erase save</button>
       </div>
-      <div class="hud-right">
-        <button class="icon-btn" id="muteBtn" title="Sound">🔊</button>
-        <button class="icon-btn" id="statsBtn" title="Stats">📊</button>
+      <p class="menu-foot"><span id="menuSound">🔊 Sound on</span> · tap to toggle</p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------- level intro -->
+  <section id="intro" class="screen clear" aria-hidden="true">
+    <div class="intro-card">
+      <div class="intro-eyebrow">Barn</div>
+      <div class="intro-number" id="introNumber">1</div>
+      <div class="intro-sub" id="introSub">4 piles · one needle</div>
+    </div>
+    <button class="skip-btn" id="btnSkipIntro">Skip ▸</button>
+  </section>
+
+  <!-- --------------------------------------------------------- HUD -->
+  <div id="hud" aria-hidden="true">
+    <div class="hud-top">
+      <div class="coins" id="coinBox"><span class="coin-icon">🪙</span><span id="coinCount">0</span></div>
+      <div class="barn-chip">Barn <span id="hudLevel">1</span></div>
+      <div class="hud-top-right">
+        <button class="icon-btn" id="btnShop" title="Shop">🛒<span id="shopDot" class="dot" hidden></span></button>
+        <button class="icon-btn" id="btnPause" title="Pause">⏸</button>
       </div>
     </div>
-    <div class="stack-meta">
-      <span id="stackName">Haystack #1</span>
-      <span id="stackProgressText">0 / 0 hay searched</span>
-    </div>
-    <div class="progress-track"><div class="progress-fill" id="stackProgress"></div></div>
-    <div id="detectorLine" class="detector-line"></div>
-  </header>
 
-  <!-- Bottom bar -->
-  <footer id="bottom">
-    <div class="shovel-status">
-      <div class="shovel-label">
-        <span id="shovelName">Bare Hands</span>
-        <span id="shovelLoad">0 / 4</span>
+    <div class="sense-line" id="senseLine"></div>
+
+    <div class="pile-card" id="pileCard" hidden>
+      <div class="pile-card-head"><span id="pileName">Pile A</span><span id="pileSearched">0% searched</span></div>
+      <div class="pile-track"><div class="pile-fill" id="pileFill"></div></div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="load-box">
+        <div class="load-label"><span id="shovelName">Bare Hands</span><span id="loadText">0 / 12</span></div>
+        <div class="load-track"><div class="load-fill" id="loadFill"></div></div>
       </div>
-      <div class="load-track"><div class="load-fill" id="loadFill"></div></div>
     </div>
-    <button id="shopBtn" class="shop-btn">🛒 Shop<span id="shopDot" class="dot hidden"></span></button>
-  </footer>
 
-  <div id="hint" class="hint">Tap the haystack to fill your shovel</div>
+    <!-- touch controls -->
+    <div id="stick" class="stick" hidden><div class="stick-knob" id="stickKnob"></div></div>
+    <button id="actionBtn" class="action-btn">Dig</button>
+    <div class="prompt" id="prompt" hidden></div>
+  </div>
 
-  <!-- Shop drawer -->
+  <!-- -------------------------------------------------------- shop -->
   <section id="shop" class="drawer" aria-hidden="true">
     <div class="drawer-head">
       <div class="tabs">
         <button class="tab active" data-tab="shovels">Shovels</button>
-        <button class="tab" data-tab="upgrades">Upgrades</button>
+        <button class="tab" data-tab="gear">Gear</button>
       </div>
       <button class="icon-btn" id="closeShop">✕</button>
     </div>
@@ -62,27 +94,61 @@
     <div class="drawer-body" id="shopBody"></div>
   </section>
 
-  <!-- Stats modal -->
-  <section id="statsModal" class="modal" aria-hidden="true">
-    <div class="modal-card">
-      <h2>Dig Report</h2>
-      <ul id="statsList" class="stats-list"></ul>
-      <button class="btn ghost danger" id="resetBtn">Reset everything</button>
-      <button class="btn" id="closeStats">Back to digging</button>
+  <!-- ------------------------------------------------------- pause -->
+  <section id="pause" class="screen dim" aria-hidden="true">
+    <div class="card">
+      <h2>Paused</h2>
+      <button class="btn" id="btnResume">Back to the barn</button>
+      <button class="btn ghost" id="btnPauseShop">Shop</button>
+      <button class="btn ghost" id="btnCamera">Camera: Follow</button>
+      <button class="btn ghost" id="btnSound">Sound: On</button>
+      <button class="btn ghost" id="btnQuit">Quit to menu</button>
     </div>
   </section>
 
-  <!-- Needle found -->
-  <section id="winModal" class="modal win" aria-hidden="true">
-    <div class="modal-card">
+  <!-- ---------------------------------------------------- how to play -->
+  <section id="howto" class="screen dim" aria-hidden="true">
+    <div class="card">
+      <h2>How to play</h2>
+      <ul class="howto-list">
+        <li><b>Move</b> — WASD / arrow keys, or the stick on the left of the screen.</li>
+        <li><b>Dig</b> — stand at a hay pile and hold the action button (or <kbd>Space</kbd>).</li>
+        <li><b>Sift</b> — carry your load back to the cart by the doors and dump it. Sifted hay pays coins.</li>
+        <li><b>The needle</b> is hidden at some depth inside <b>one</b> pile. Sift that pile deep enough and it turns up.</li>
+        <li>Digging the wrong pile is never wasted — it still pays. Needle Sense narrows down where to look.</li>
+        <li>Spend coins on shovels and gear. Better shovels unlock as you clear barns.</li>
+      </ul>
+      <button class="btn" id="closeHowto">Got it</button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- stats -->
+  <section id="stats" class="screen dim" aria-hidden="true">
+    <div class="card">
+      <h2>Farm record</h2>
+      <ul class="stats-list" id="statsList"></ul>
+      <button class="btn" id="closeStats">Back</button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------ level complete -->
+  <section id="win" class="screen dim" aria-hidden="true">
+    <div class="card">
       <div class="needle-art">🪡</div>
-      <h2>You found the needle!</h2>
+      <h2>Needle found!</h2>
       <p id="winText"></p>
       <div class="win-stats" id="winStats"></div>
-      <button class="btn big" id="nextStackBtn">Find a bigger haystack</button>
+      <button class="btn big" id="btnNextBarn">On to the next barn</button>
+      <button class="btn ghost" id="btnWinShop">Spend coins first</button>
     </div>
   </section>
 </div>
-<script src="game.js"></script>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
 </body>
 </html>

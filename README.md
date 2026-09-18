@@ -1,60 +1,84 @@
 # 🌾 Need in a Haystack
 
-A first-person idle/clicker game about the world's least efficient search problem:
-finding a needle in a haystack, one shovelful at a time.
+A small 3D game about the world's least efficient search problem. You are a
+farmhand in a barn full of hay. A needle is buried in **one** of the piles. Walk
+over, dig it out one shovel-load at a time, sift it at the cart, and keep going
+until the needle turns up — then move to a bigger barn.
 
-Pure HTML/CSS/JS — no build step, no dependencies. Open `index.html` and dig.
+Built with [three.js](https://threejs.org) (vendored, MIT). No build step, no
+network calls, no dependencies to install.
 
 **▶ Play it: https://polite-carrot.github.io/Need-In-A-Haystack/**
 
 ## How to play
 
-1. **Tap the haystack** to load hay into your shovel.
-2. **Tap the search pit** to dump the load — sifted hay pays out coins.
-3. **Spend coins in the shop** on bigger shovels and upgrades.
-4. Somewhere in the stack is a needle. Keep digging until you turn it up, then
-   move on to a haystack twice the size that pays twice as well.
+| | Desktop | Touch |
+| --- | --- | --- |
+| Move | `W A S D` / arrow keys | left stick |
+| Dig / sift | hold `Space` or `E` | hold the action button |
+| Look around | drag the scene | drag the scene |
+| Pause | `Esc` | ⏸ button |
 
-Keyboard shortcuts: `Space` scoops, `Enter` dumps.
+1. Walk to a hay pile and **hold to dig** until your shovel is full.
+2. Carry the load to the **sifter** by the doors and dump it. Sifted hay pays coins.
+3. The needle sits at a hidden depth inside one pile — sift that pile deep enough
+   and it turns up. Digging the wrong pile is never wasted; it still pays.
+4. Spend coins on shovels and gear between barns. Bigger shovels unlock as you
+   clear barns, so the farm opens up gradually rather than all at once.
 
 ## What's in it
 
-- **12 shovels**, from bare hands (5 hay a scoop) to the Hand of Harvest
-  (a million). Each one is drawn in your hands, bigger and shinier than the last.
-- **Upgrades** — Grip Gloves (more hay per scoop), Sifting Screen (more coins per
-  hay), Farmhands (idle shovelling while you browse the shop), and a Metal
-  Detector that starts clicking when the needle is close.
-- **Haystacks** are the prestige loop: the needle sits at a random hidden depth,
-  the stack visibly shrinks as you search it, and each new stack is 2.3× bigger
-  and pays 2.2× better.
-- Procedural straw rendering, hay particles, floating coin numbers, synthesised
-  sound effects (WebAudio, no asset files), and autosave to `localStorage`.
+- **A barn you walk around** — procedural low-poly barn interior and exterior,
+  lanterns, dust in the light shafts, a farmhand with a hand-animated walk,
+  dig and dump cycle.
+- **A walk-in cutscene** for every barn: the doors swing open, the camera
+  follows you inside, and the barn number lands on screen. Skippable.
+- **Spatial search, not tapping.** Each barn has labelled piles (A, B, C…) and
+  exactly one holds the needle. The pile card shows how deeply you have searched
+  the pile you're standing at.
+- **Needle Sense** — a detector that tells you how close you are, then which pile
+  you're standing at, then marks the pile outright at level 3.
+- **8 shovels and 4 pieces of gear**: work boots, sifting screen, farmhands who
+  keep digging while you walk, and the detector.
+- Main menu, pause menu, first-person / follow camera toggle, synthesised sound
+  effects (no audio files), and autosave to `localStorage`.
+
+## Balance
+
+Each barn has more piles and bigger piles than the last (`×1.5` hay), and pays
+`×1.85` per hay. Shovels are gated behind barn levels as well as price, so
+clearing barns — not grinding one — is what opens the next tier.
 
 ## Running it
 
-Just open `index.html` in a browser. To serve it locally instead:
+Open `index.html` in a browser, or serve the folder:
 
 ```sh
 npx serve .     # or: python3 -m http.server
 ```
 
+Progress is saved in `localStorage` under `niah.save.v2`; **Erase save** on the
+main menu clears it.
+
 ## Hosting on GitHub Pages
 
-The site is the repository root on `main` — plain static files, no build step, all
-asset paths relative, so it works from a project subpath. `.nojekyll` keeps Pages
-from running the files through Jekyll.
+The site is the repository root on `main` — static files, relative paths, so it
+serves from a project subpath. `.nojekyll` stops Pages running it through Jekyll.
 
-To turn it on: **Settings → Pages → Build and deployment → Source: Deploy from a
-branch**, then pick **`main`** and **`/ (root)`** and save. The first build takes a
-minute; after that every push to `main` redeploys automatically.
-
-Progress is saved in `localStorage` under `needleInHaystack.save.v1`. The
-**Reset everything** button in the stats panel (📊) wipes it.
+**Settings → Pages → Build and deployment → Source: Deploy from a branch**, then
+pick **`main`** and **`/ (root)`**.
 
 ## Layout
 
-| File | What it does |
+| Path | What it does |
 | --- | --- |
-| `index.html` | Canvas, HUD, shop drawer, modals |
-| `style.css` | Barn-themed UI, responsive down to small phones |
-| `game.js` | Game state, economy, canvas scene, input, save/load |
+| `index.html` | Canvas plus every UI overlay (menu, HUD, shop, cutscene, modals) |
+| `css/style.css` | Barn-themed UI, responsive down to small phones |
+| `js/world.js` | Renderer, barn geometry, hay piles, sifter, particles |
+| `js/player.js` | Farmhand mesh, walk/dig animation, movement, camera rig |
+| `js/game.js` | State, economy, barn flow, digging, input, save/load |
+| `js/ui.js` | Screens, HUD, shop rendering |
+| `js/audio.js` | WebAudio sound effects |
+| `vendor/three.min.js` | three.js r160 (MIT, see `vendor/three.LICENSE`) |
+
+The original 2D tap version lives in this repo's git history, before the 3D rework.
