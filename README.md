@@ -43,7 +43,7 @@ network calls, no dependencies to install.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
   13 outfits (camo, flags, hi-vis, one very loud pink), 13 hats (caps, cowboy,
   top hat, viking helm, a bunny head, a traffic cone, a crown, and the Polite
-  Carrot mascot itself, smile and all) and 9 shovel skins (gold, trident,
+  Carrot mascot worn as a full head, smile and all) and 9 shovel skins (gold, trident,
   giant spoon, candy cane, diamond). Cosmetic only —
   every dig stat still comes from the shop. Patterns are drawn procedurally at
   runtime, so there are still no image assets in the repo.

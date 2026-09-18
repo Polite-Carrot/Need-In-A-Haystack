@@ -285,50 +285,54 @@ NIAH.cosmetics = (function () {
         return g;
       } },
     { id: 'carrot', name: 'Polite Carrot', price: 120000, unlock: 6, swatch: ['#FF6B1A', '#65B84F'],
-      desc: 'The house mascot, smile and all.',
+      desc: 'Become the mascot. Smile included.',
       build: () => {
         const g = new T.Group();
-        g.rotation.z = -0.14;            // the logo sits at a jaunty 8 degrees
+        g.rotation.z = -0.09;              // the logo's jaunty lean, gentler on a head
 
-        // body: a carrot standing on its tip, wide end up, as in the logo
-        const H = 1.12, R = 0.36, BASE = 0.02;
-        const body = new T.Mesh(new T.ConeGeometry(R, H, 14), M(0xff6b1a));
-        body.rotation.x = Math.PI;       // apex down
-        body.position.y = BASE + H / 2;
+        /* A carrot head rather than a carrot hat: one lathed profile, domed at
+           the crown and tapering to a tip that ends up inside the chest, so the
+           farmer's own head is swallowed and the silhouette still reads carrot.
+           x is the radius, y the height; the head it has to cover is a 0.3
+           sphere centred at -0.12. */
+        const profile = [
+          [0.0, -1.0], [0.05, -0.95], [0.15, -0.78], [0.25, -0.56],
+          [0.33, -0.36], [0.385, -0.16], [0.41, 0.02], [0.40, 0.20],
+          [0.355, 0.38], [0.27, 0.50], [0.15, 0.575], [0.02, 0.60],
+        ].map(([x, y]) => new T.Vector2(x, y));   // tip first: lathe winds
+                                                  // outward-facing from the
+                                                  // bottom up
+        const body = new T.Mesh(new T.LatheGeometry(profile, 14), M(0xff6b1a, true));
         g.add(body);
-        // radius of the carrot at a given height, for placing things on it
-        const at = (y) => R * ((y - BASE) / H);
 
-        // leaves
-        const leaves = [[0x65b84f, -0.45, 0.5], [0x4b9d43, 0.42, 0.56], [0x7bcb59, -0.02, 0.44]];
+        // leaves out of the crown
+        const leaves = [[0x65b84f, -0.46, 0.54], [0x4b9d43, 0.44, 0.6], [0x7bcb59, -0.02, 0.46]];
         leaves.forEach(([col, lean, len], i) => {
           const leaf = new T.Mesh(new T.ConeGeometry(0.1, len, 7), M(col, true));
-          leaf.position.set(Math.sin(lean) * 0.17, BASE + H + Math.cos(lean) * len * 0.42, (i === 2 ? -0.08 : 0.04));
+          leaf.position.set(Math.sin(lean) * 0.14, 0.56 + Math.cos(lean) * len * 0.42, i === 2 ? -0.09 : 0.05);
           leaf.rotation.z = -lean;
-          leaf.rotation.x = i === 2 ? -0.28 : 0.12;
+          leaf.rotation.x = i === 2 ? -0.3 : 0.14;
           g.add(leaf);
         });
 
-        // face
-        const eyeY = 0.7;
+        // face, on the widest part of the body as in the logo
         for (const sx of [-1, 1]) {
-          const eye = new T.Mesh(new T.SphereGeometry(0.052, 10, 8), M(0x111111));
+          const eye = new T.Mesh(new T.SphereGeometry(0.058, 12, 10), M(0x111111));
           eye.scale.y = 1.3;
-          eye.position.set(sx * 0.085, eyeY, at(eyeY) * 0.82);
-          const glint = new T.Mesh(new T.SphereGeometry(0.02, 6, 5), M(0xffffff));
-          glint.position.set(sx * 0.085 - 0.02, eyeY + 0.03, at(eyeY) * 0.82 + 0.05);
+          eye.position.set(sx * 0.145, 0.13, 0.345);
+          const glint = new T.Mesh(new T.SphereGeometry(0.022, 7, 6), M(0xffffff));
+          glint.position.set(sx * 0.145 - 0.024, 0.172, 0.375);
           g.add(eye, glint);
         }
-        const smileY = 0.55;
-        const smile = new T.Mesh(new T.TorusGeometry(0.085, 0.017, 6, 14, Math.PI * 0.82), M(0x421a12));
-        smile.position.set(0, smileY + 0.03, at(smileY) * 0.84);
-        smile.rotation.z = Math.PI + Math.PI * 0.09;   // closed, turned up at the ends
+        const smile = new T.Mesh(new T.TorusGeometry(0.115, 0.021, 7, 16, Math.PI * 0.8), M(0x421a12));
+        smile.position.set(0, -0.02, 0.37);
+        smile.rotation.z = Math.PI + Math.PI * 0.1;      // closed, turned up at the ends
         g.add(smile);
 
-        // the little root dashes down the sides
-        [[0.52, -1], [0.36, 1], [0.24, -1]].forEach(([y, sx]) => {
-          const dash = new T.Mesh(new T.CylinderGeometry(0.013, 0.013, 0.075, 5), M(0xd9470b));
-          dash.position.set(sx * at(y) * 0.6, y, at(y) * 0.5);
+        // root dashes down the taper
+        [[-0.1, -1, 0.36], [-0.26, 1, 0.32], [-0.42, -1, 0.26]].forEach(([y, sx, r]) => {
+          const dash = new T.Mesh(new T.CylinderGeometry(0.015, 0.015, 0.09, 5), M(0xd9470b));
+          dash.position.set(sx * r * 0.62, y, r * 0.72);
           dash.rotation.z = Math.PI / 2 - sx * 0.5;
           g.add(dash);
         });
