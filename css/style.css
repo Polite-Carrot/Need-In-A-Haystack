@@ -368,10 +368,38 @@ html, body {
   gap: 10px;
   max-height: 52%;
 }
+.subtabs {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.subtabs[hidden] { display: none; }
+.subtab {
+  border: 2px solid rgba(255,244,220,.14);
+  background: rgba(0,0,0,.22);
+  color: var(--cream);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: .8;
+}
+.subtab.active {
+  background: rgba(255,207,77,.18);
+  border-color: var(--gold);
+  color: var(--gold);
+  opacity: 1;
+}
+.subtab .count { opacity: .6; font-size: 11px; margin-left: 4px; }
+
 .wardrobe-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 9px;
+  /* shrink before the footer does, so the blurb is never clipped off */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
@@ -414,12 +442,13 @@ html, body {
 .kit-tag.locked { color: #ffb3a3; }
 
 .wardrobe-foot {
+  flex: none;
   font-size: 12px;
   font-weight: 600;
   opacity: .78;
   text-align: center;
-  min-height: 16px;
-  line-height: 1.4;
+  min-height: 2.6em;
+  line-height: 1.3;
 }
 
 /* ------------------------------------------------------------ shop */

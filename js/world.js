@@ -16,6 +16,8 @@ NIAH.world = (function () {
     hayDark:  new T.MeshLambertMaterial({ color: 0xa97c26, flatShading: true }),
     straw:    new T.MeshLambertMaterial({ color: 0xe8c463 }),
     metal:    new T.MeshLambertMaterial({ color: 0xb9c2c9, flatShading: true }),
+    beltBed:  new T.MeshLambertMaterial({ color: 0x2f2a24 }),
+    beltSlat: new T.MeshLambertMaterial({ color: 0x4a423a }),
     grass:    new T.MeshLambertMaterial({ color: 0x5f8a3f }),
     trunk:    new T.MeshLambertMaterial({ color: 0x4a3119 }),
     leaf:     new T.MeshLambertMaterial({ color: 0x3f6b31, flatShading: true }),
@@ -335,8 +337,8 @@ NIAH.world = (function () {
       g.add(light);
     }
 
-    // sifting cart, off to one side so the doorway stays clear
-    state.cart = buildCart(g, -(halfW - 5.2), L.cartZ);
+    // the sifter runs along the wall in the corner by the doors
+    state.cart = buildSifter(g, -(halfW - 2.6), L.cartZ + 4);
 
     // hay piles
     spec.piles.forEach((p, i) => {
@@ -356,32 +358,87 @@ NIAH.world = (function () {
     return { layout: L, bounds: state.bounds };
   }
 
-  function buildCart(parent, x, z) {
-    const cart = new T.Group();
-    const body = new T.Mesh(new T.BoxGeometry(6, 2.2, 4), MAT.plank);
-    body.position.y = 1.7;
-    const lip = new T.Mesh(new T.BoxGeometry(6.4, 0.4, 4.4), MAT.beam);
-    lip.position.y = 2.9;
-    const mesh = new T.Mesh(new T.BoxGeometry(5.4, 0.2, 3.4), MAT.metal);
-    mesh.position.y = 2.75;
-    cart.add(body, lip, mesh);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const wheel = new T.Mesh(new T.CylinderGeometry(0.9, 0.9, 0.35, 12), MAT.beam);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(sx * 2.6, 0.9, sz * 1.5);
-      cart.add(wheel);
+  /* The sifter: a conveyor tucked along the wall by the doors. You tip a load
+     into the hopper at the near end, the belt carries it down to the crate. */
+  function buildSifter(parent, x, nearZ) {
+    const g = new T.Group();
+    const LEN = 8.2, W = 2.2, TOP = 1.7;
+    const farZ = nearZ - LEN;
+    const midZ = (nearZ + farZ) / 2;
+
+    // frame and legs
+    const frame = new T.Mesh(new T.BoxGeometry(W + 0.35, 0.34, LEN), MAT.beam);
+    frame.position.set(0, TOP - 0.3, midZ - nearZ);
+    g.add(frame);
+    for (const lz of [-0.6, -LEN + 0.6]) {
+      for (const lx of [-1, 1]) {
+        const leg = new T.Mesh(new T.BoxGeometry(0.3, TOP - 0.3, 0.3), MAT.beam);
+        leg.position.set(lx * (W / 2 - 0.1), (TOP - 0.3) / 2, lz);
+        g.add(leg);
+      }
     }
-    const hay = new T.Mesh(new T.BoxGeometry(5.2, 1.1, 3.2), MAT.hay);
-    hay.position.y = 2.6;
+
+    // belt bed plus the slats that sell the motion
+    const bed = new T.Mesh(new T.BoxGeometry(W, 0.12, LEN - 0.8), MAT.beltBed);
+    bed.position.set(0, TOP, midZ - nearZ);
+    g.add(bed);
+    const slats = [];
+    const SLAT_GAP = 0.62;
+    const count = Math.floor((LEN - 0.8) / SLAT_GAP);
+    for (let i = 0; i < count; i++) {
+      const slat = new T.Mesh(new T.BoxGeometry(W - 0.12, 0.09, 0.16), MAT.beltSlat);
+      slat.position.set(0, TOP + 0.08, -0.5 - i * SLAT_GAP);
+      g.add(slat);
+      slats.push(slat);
+    }
+
+    // rollers at each end
+    const rollers = [];
+    for (const rz of [-0.45, -LEN + 0.45]) {
+      const roller = new T.Mesh(new T.CylinderGeometry(0.28, 0.28, W + 0.1, 10), MAT.metal);
+      roller.rotation.z = Math.PI / 2;
+      roller.position.set(0, TOP, rz);
+      g.add(roller);
+      rollers.push(roller);
+    }
+
+    // hopper at the near end — this is what the player tips into
+    const hopper = new T.Mesh(
+      new T.CylinderGeometry(1.35, 0.7, 1.1, 8, 1, true),
+      new T.MeshLambertMaterial({ color: 0x9fb0bb, flatShading: true, side: T.DoubleSide })
+    );
+    hopper.position.set(0, TOP + 0.75, -0.2);
+    g.add(hopper);
+
+    // crate at the far end, filling with sifted hay
+    const crate = new T.Mesh(new T.BoxGeometry(W + 0.9, 1.5, 2.4), MAT.plank);
+    crate.position.set(0, 0.75, -LEN - 0.9);
+    g.add(crate);
+    const hay = new T.Mesh(new T.BoxGeometry(W + 0.4, 1.1, 2.0), MAT.hay);
+    hay.position.set(0, 1.2, -LEN - 0.9);
     hay.scale.y = 0.02;
-    cart.add(hay);
-    const board = new T.Mesh(new T.PlaneGeometry(4.4, 1.5), new T.MeshBasicMaterial({ map: cartSignTexture(), transparent: true }));
-    board.position.set(0, 4.3, 0);
-    cart.add(board);
-    cart.position.set(x, 0, z);
-    cart.rotation.y = x < 0 ? 0.35 : -0.35;
-    parent.add(cart);
-    return { group: cart, hay, x, z, fill: 0 };
+    g.add(hay);
+
+    // sign on a post over the hopper
+    const post = new T.Mesh(new T.BoxGeometry(0.16, 2.6, 0.16), MAT.beam);
+    post.position.set(0, TOP + 1.3, 0.55);
+    g.add(post);
+    const board = new T.Mesh(new T.PlaneGeometry(4.2, 1.45), new T.MeshBasicMaterial({
+      map: cartSignTexture(), transparent: true, side: T.DoubleSide,
+    }));
+    board.position.set(0, TOP + 2.45, 0.55);
+    board.rotation.y = 0.8;          // angled to face the room, not the wall
+    g.add(board);
+
+    g.position.set(x, 0, nearZ);
+    parent.add(g);
+    return {
+      group: g, hay, slats, rollers,
+      x, z: nearZ - 1.2,                    // where the player tips it in
+      beltTop: TOP, len: LEN, nearZ, farZ,
+      collide: { x, z: midZ, hx: W / 2 + 0.5, hz: LEN / 2 + 1.6 },
+      fill: 0, riders: [],
+    };
   }
 
   function buildPile(parent, x, z, index, data) {
@@ -444,10 +501,53 @@ NIAH.world = (function () {
   }
 
   function setCartFill(f) {
-    if (!state.cart) return;
-    state.cart.fill = f;
-    state.cart.hay.scale.y = Math.max(0.02, f);
-    state.cart.hay.position.y = 2.1 + 0.55 * f;
+    const c = state.cart;
+    if (!c) return;
+    c.fill = f;
+    c.hay.scale.y = Math.max(0.02, f);
+    c.hay.position.y = 0.75 + 0.55 * f;
+  }
+
+  /* A tipped load rides the belt down to the crate. */
+  function sifterLoad(clumps) {
+    const c = state.cart;
+    if (!c) return;
+    for (let i = 0; i < clumps; i++) {
+      const m = new T.Mesh(new T.BoxGeometry(0.5 + Math.random() * 0.4, 0.34, 0.5), MAT.hay);
+      m.position.set((Math.random() - 0.5) * 1.1, c.beltTop + 0.28, -0.5 - Math.random() * 0.6);
+      m.rotation.y = Math.random();
+      c.group.add(m);
+      c.riders.push({ mesh: m, z: m.position.z });
+    }
+    while (c.riders.length > 26) {
+      const old = c.riders.shift();
+      c.group.remove(old.mesh);
+      old.mesh.geometry.dispose();
+    }
+  }
+
+  const BELT_SPEED = 2.6;
+
+  function updateSifter(dt) {
+    const c = state.cart;
+    if (!c) return;
+    const span = c.len - 0.8;
+    for (const slat of c.slats) {
+      slat.position.z -= BELT_SPEED * dt;
+      if (slat.position.z < -0.5 - span) slat.position.z += span;
+    }
+    for (const r of c.rollers) r.rotation.x -= BELT_SPEED * dt * 3;
+    for (let i = c.riders.length - 1; i >= 0; i--) {
+      const rider = c.riders[i];
+      rider.mesh.position.z -= BELT_SPEED * dt;
+      if (rider.mesh.position.z < -c.len + 0.3) {
+        // tipped off the end into the crate
+        hayBurst(c.x + rider.mesh.position.x, c.beltTop, c.z - c.len + 1.2, 3);
+        c.group.remove(rider.mesh);
+        rider.mesh.geometry.dispose();
+        c.riders.splice(i, 1);
+      }
+    }
   }
 
   function setNeedleGlow(pile) {
@@ -488,6 +588,8 @@ NIAH.world = (function () {
     for (const d of state.doors) {
       d.pivot.rotation.y = -d.sign * state.doorOpen * 1.9;
     }
+    updateSifter(dt);
+
     // dust drift
     if (dust) {
       dust.rotation.y = time * 0.01;
@@ -522,7 +624,7 @@ NIAH.world = (function () {
   return {
     init, resize, render, renderTo, update,
     buildLevel, layoutFor,
-    setPileVisual, setCartFill, setNeedleGlow, setDoorOpen, hayBurst,
+    setPileVisual, setCartFill, setNeedleGlow, setDoorOpen, hayBurst, sifterLoad,
     get scene() { return scene; },
     get camera() { return camera; },
     get piles() { return state.piles; },

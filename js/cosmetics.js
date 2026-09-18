@@ -126,32 +126,52 @@ NIAH.cosmetics = (function () {
 
   /* -------------------------------------------------------- outfits */
 
+  const OUTFIT_CATS = [
+    { id: 'colour', name: 'Colours' },
+    { id: 'flag', name: 'Flags' },
+    { id: 'other', name: 'Other' },
+  ];
+
   const OUTFITS = [
-    { id: 'farmhand', name: 'Farmhand Red', price: 0, desc: 'Where every farmer starts.',
+    { id: 'farmhand', name: 'Farmhand Red', cat: 'colour', price: 0, desc: 'Where every farmer starts.',
       shirt: { color: 0xc9543f }, trousers: { color: 0x3f6390 }, swatch: ['#c9543f', '#3f6390'] },
-    { id: 'denim', name: 'Double Denim', price: 400, desc: 'Head to toe, no apologies.',
+    { id: 'denim', name: 'Double Denim', cat: 'colour', price: 400, desc: 'Head to toe, no apologies.',
       shirt: { color: 0x5b8dc4 }, trousers: { color: 0x2f4f77 }, swatch: ['#5b8dc4', '#2f4f77'] },
-    { id: 'sunday', name: 'Sunday Best', price: 1200, desc: 'Too good for a barn.',
+    { id: 'forest', name: 'Forest Green', cat: 'colour', price: 600, desc: 'Blends with absolutely no hay.',
+      shirt: { color: 0x3f8f5a }, trousers: { color: 0x27503a }, swatch: ['#3f8f5a', '#27503a'] },
+    { id: 'sunflower', name: 'Sunflower', cat: 'colour', price: 800, desc: 'Brighter than the barn lamps.',
+      shirt: { color: 0xf0c03a }, trousers: { color: 0x7a5a1c }, swatch: ['#f0c03a', '#7a5a1c'] },
+    { id: 'sunday', name: 'Sunday Best', cat: 'colour', price: 1200, desc: 'Too good for a barn.',
       shirt: { color: 0xf4ecd8 }, trousers: { color: 0x2b2b33 }, swatch: ['#f4ecd8', '#2b2b33'] },
-    { id: 'lumber', name: 'Lumberjack', price: 2200, desc: 'Smells faintly of pine.',
-      shirt: { tex: 'check' }, trousers: { color: 0x3b3027 }, swatch: ['#8c2f2a', '#3b3027'] },
-    { id: 'hivis', name: 'Hi-Vis', price: 4000, desc: 'Visible from three barns away.',
-      shirt: { tex: 'hiVis' }, trousers: { tex: 'hiVis' }, swatch: ['#d8f235', '#9aa7b0'] },
-    { id: 'woodland', name: 'Woodland Camo', price: 7500, desc: 'Hides you from the hay.',
-      shirt: { tex: 'camoWoodland' }, trousers: { tex: 'camoWoodland' }, swatch: ['#4a5834', '#6b7a47'] },
-    { id: 'desert', name: 'Desert Camo', price: 7500, desc: 'For a very dry harvest.',
-      shirt: { tex: 'camoDesert' }, trousers: { tex: 'camoDesert' }, swatch: ['#cbb188', '#7d6440'] },
-    { id: 'pinkcamo', name: 'Pink Camo', price: 16000, desc: 'Tactical, but make it loud.',
-      shirt: { tex: 'camoPink' }, trousers: { tex: 'camoPink' }, swatch: ['#ff8fc4', '#a63472'] },
-    { id: 'flagUK', name: 'Union Flag', price: 30000, desc: 'Hay and country.',
+    { id: 'plum', name: 'Plum', cat: 'colour', price: 1600, desc: 'Nobody asked, but it works.',
+      shirt: { color: 0x8a4a97 }, trousers: { color: 0x40274a }, swatch: ['#8a4a97', '#40274a'] },
+    { id: 'coral', name: 'Coral', cat: 'colour', price: 2400, desc: 'Sunset on the south field.',
+      shirt: { color: 0xf07a5f }, trousers: { color: 0x3c5a68 }, swatch: ['#f07a5f', '#3c5a68'] },
+    { id: 'charcoal', name: 'Charcoal', cat: 'colour', price: 5000, desc: 'Hides the dirt. All of it.',
+      shirt: { color: 0x3a3d44 }, trousers: { color: 0x22242a }, swatch: ['#3a3d44', '#22242a'] },
+    { id: 'ice', name: 'Ice Blue', cat: 'colour', price: 9000, desc: 'Cool head, warm barn.',
+      shirt: { color: 0x9fd8e8 }, trousers: { color: 0x2f6c85 }, swatch: ['#9fd8e8', '#2f6c85'] },
+
+    { id: 'flagUK', name: 'Union Flag', cat: 'flag', price: 30000, desc: 'Hay and country.',
       shirt: { tex: 'flagUK' }, trousers: { color: 0x1d2b4a }, swatch: ['#012169', '#C8102E'] },
-    { id: 'flagUS', name: 'Stars & Stripes', price: 30000, desc: 'Barn of the free.',
+    { id: 'flagUS', name: 'Stars & Stripes', cat: 'flag', price: 30000, desc: 'Barn of the free.',
       shirt: { tex: 'flagUS' }, trousers: { color: 0x2c3358 }, swatch: ['#B22234', '#3C3B6E'] },
-    { id: 'jolly', name: 'Jolly Roger', price: 60000, desc: 'Yo ho ho and a bale of hay.',
+    { id: 'jolly', name: 'Jolly Roger', cat: 'flag', price: 60000, desc: 'Yo ho ho and a bale of hay.',
       shirt: { tex: 'jolly' }, trousers: { color: 0x17150f }, swatch: ['#12100e', '#f4efe4'] },
-    { id: 'hayprint', name: 'Full Hay Print', price: 90000, desc: 'Become the haystack.',
+
+    { id: 'lumber', name: 'Lumberjack', cat: 'other', price: 2200, desc: 'Smells faintly of pine.',
+      shirt: { tex: 'check' }, trousers: { color: 0x3b3027 }, swatch: ['#8c2f2a', '#3b3027'] },
+    { id: 'hivis', name: 'Hi-Vis', cat: 'other', price: 4000, desc: 'Visible from three barns away.',
+      shirt: { tex: 'hiVis' }, trousers: { tex: 'hiVis' }, swatch: ['#d8f235', '#9aa7b0'] },
+    { id: 'woodland', name: 'Woodland Camo', cat: 'other', price: 7500, desc: 'Hides you from the hay.',
+      shirt: { tex: 'camoWoodland' }, trousers: { tex: 'camoWoodland' }, swatch: ['#4a5834', '#6b7a47'] },
+    { id: 'desert', name: 'Desert Camo', cat: 'other', price: 7500, desc: 'For a very dry harvest.',
+      shirt: { tex: 'camoDesert' }, trousers: { tex: 'camoDesert' }, swatch: ['#cbb188', '#7d6440'] },
+    { id: 'pinkcamo', name: 'Pink Camo', cat: 'other', price: 16000, desc: 'Tactical, but make it loud.',
+      shirt: { tex: 'camoPink' }, trousers: { tex: 'camoPink' }, swatch: ['#ff8fc4', '#a63472'] },
+    { id: 'hayprint', name: 'Full Hay Print', cat: 'other', price: 90000, desc: 'Become the haystack.',
       shirt: { tex: 'hay' }, trousers: { tex: 'hay' }, swatch: ['#e8c463', '#b98f2c'] },
-    { id: 'disco', name: 'Disco Sequins', price: 150000, unlock: 6, desc: 'The barn becomes a dancefloor.',
+    { id: 'disco', name: 'Disco Sequins', cat: 'other', price: 150000, unlock: 6, desc: 'The barn becomes a dancefloor.',
       shirt: { tex: 'disco' }, trousers: { tex: 'disco' }, swatch: ['#ff5ea8', '#5ed4ff'] },
   ];
 
@@ -557,5 +577,5 @@ NIAH.cosmetics = (function () {
     return kind === 'outfit' ? OUTFITS : kind === 'hat' ? HATS : SHOVEL_SKINS;
   }
 
-  return { OUTFITS, HATS, SHOVEL_SKINS, applyLook, listFor, priceOf, byId };
+  return { OUTFITS, OUTFIT_CATS, HATS, SHOVEL_SKINS, applyLook, listFor, priceOf, byId };
 })();

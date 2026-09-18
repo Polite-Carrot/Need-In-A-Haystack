@@ -233,7 +233,7 @@ NIAH.game = (function () {
     const c = NIAH.world.cart;
     if (!c) return false;
     const p = NIAH.player.position;
-    return Math.hypot(p.x - c.x, p.z - c.z) < 6.2;
+    return Math.hypot(p.x - c.x, p.z - c.z) < 5.4;
   }
 
   function addLoad(pileIndex, amount) {
@@ -293,7 +293,8 @@ NIAH.game = (function () {
     actionLock = 0.5;
     NIAH.player.setLoadVisual(0);
     NIAH.world.setCartFill(Math.min(1, NIAH.world.cart.fill + 0.25));
-    NIAH.world.hayBurst(c.x, 3.4, c.z, 14);
+    NIAH.world.sifterLoad(4);
+    NIAH.world.hayBurst(c.x, NIAH.world.cart.beltTop + 1.4, c.z, 14);
     NIAH.audio.dump();
     NIAH.audio.coin();
     NIAH.ui.bumpCoins();
@@ -516,6 +517,7 @@ NIAH.game = (function () {
     NIAH.ui.screen('win', false);
     NIAH.ui.hudOn(false);
     NIAH.ui.screen('wardrobe', true);
+    NIAH.ui.syncOutfitCat();
     NIAH.ui.renderWardrobe(true);
     NIAH.audio.ui();
   }
@@ -591,12 +593,12 @@ NIAH.game = (function () {
     let label = 'Dig', enabled = false, prompt = '';
     if (atCart && lv.loadTotal > 0) {
       label = 'Sift'; enabled = true;
-      prompt = 'Dump ' + NIAH.ui.fmt(lv.loadTotal) + ' hay into the sifter';
+      prompt = 'Tip ' + NIAH.ui.fmt(lv.loadTotal) + ' hay onto the belt';
     } else if (pileIndex !== null) {
-      if (lv.loadTotal >= capacity()) { label = 'Full'; prompt = 'Shovel full — carry it to the cart'; }
+      if (lv.loadTotal >= capacity()) { label = 'Full'; prompt = 'Shovel full — carry it to the sifter'; }
       else { label = 'Dig'; enabled = true; prompt = 'Hold to dig pile ' + lv.piles[pileIndex].name; }
     } else if (lv.loadTotal >= capacity()) {
-      prompt = 'Shovel full — carry it to the cart';
+      prompt = 'Shovel full — carry it to the sifter';
     }
     NIAH.ui.setAction(label, enabled);
     NIAH.ui.setPrompt(prompt);

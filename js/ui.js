@@ -5,7 +5,7 @@ NIAH.ui = (function () {
   const el = (id) => document.getElementById(id);
   const E = {};
   let shopTab = 'shovels', shopSig = '';
-  let wardrobeTab = 'outfit', wardrobeSig = '';
+  let wardrobeTab = 'outfit', wardrobeSig = '', outfitCat = 'colour';
 
   const SUFFIX = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi'];
   function fmt(n) {
@@ -19,7 +19,7 @@ NIAH.ui = (function () {
   function init() {
     [
       'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win', 'wardrobe',
-      'wardrobeGrid', 'wardrobeCoins', 'wardrobeFoot',
+      'wardrobeGrid', 'wardrobeCoins', 'wardrobeFoot', 'outfitCats',
       'coinBox', 'coinCount', 'hudLevel', 'senseLine', 'pileCard', 'pileName', 'pileSearched',
       'pileFill', 'shovelName', 'loadText', 'loadFill', 'prompt', 'shopBody', 'shopCoins',
       'shopDot', 'stick', 'stickKnob', 'actionBtn', 'introNumber', 'introSub', 'statsList',
@@ -237,8 +237,13 @@ NIAH.ui = (function () {
 
   /* ------------------------------------------------------- my farmer */
 
+  const CAT_BLURB = {
+    colour: 'Plain shirt and trousers, in every colour the farm stocks.',
+    flag: 'Fly one on your back.',
+    other: 'Camo, check, hi-vis and the loud ones.',
+  };
   const KIND_BLURB = {
-    outfit: 'Shirt and trousers. Camo, flags, and one very loud pink.',
+    outfit: 'Shirt and trousers, sorted by the kind of statement you want.',
     hat: 'Sun protection, mostly. Some of it is not.',
     shovel: 'Looks only — your dug-per-second comes from the shop.',
   };
@@ -290,11 +295,42 @@ NIAH.ui = (function () {
 
   function setWardrobeFoot(text) { E.wardrobeFoot.textContent = text; }
 
+  function renderOutfitCats(items, s) {
+    E.outfitCats.hidden = false;
+    E.outfitCats.innerHTML = '';
+    NIAH.cosmetics.OUTFIT_CATS.forEach((c) => {
+      const inCat = items.filter((i) => i.cat === c.id);
+      const owned = inCat.filter((i) => NIAH.game.ownsCosmetic('outfit', i.id)).length;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'subtab' + (outfitCat === c.id ? ' active' : '');
+      b.innerHTML = '';
+      b.textContent = c.name;
+      const n = document.createElement('span');
+      n.className = 'count';
+      n.textContent = owned + '/' + inCat.length;
+      b.appendChild(n);
+      b.addEventListener('click', () => {
+        outfitCat = c.id;
+        E.wardrobeGrid.scrollTop = 0;
+        renderWardrobe(true);
+        setWardrobeFoot(CAT_BLURB[c.id]);
+        NIAH.audio.ui();
+      });
+      E.outfitCats.appendChild(b);
+    });
+  }
+
+  function syncOutfitCat() {
+    const worn = NIAH.cosmetics.byId(NIAH.cosmetics.OUTFITS, NIAH.game.state.look.outfit);
+    if (worn && worn.cat) outfitCat = worn.cat;
+  }
+
   function renderWardrobe(force) {
     const G = NIAH.game;
     if (!G || !G.state) return;
     const s = G.state;
-    const sig = [wardrobeTab, s.coins, s.level, JSON.stringify(s.look), JSON.stringify(s.wardrobe)].join('|');
+    const sig = [wardrobeTab, outfitCat, s.coins, s.level, JSON.stringify(s.look), JSON.stringify(s.wardrobe)].join('|');
     if (!force && sig === wardrobeSig) return;
     const changedTab = !wardrobeSig.startsWith(wardrobeTab + '|');
     wardrobeSig = sig;
@@ -303,9 +339,19 @@ NIAH.ui = (function () {
     const grid = E.wardrobeGrid;
     const scroll = grid.scrollTop;
     grid.innerHTML = '';
-    NIAH.cosmetics.listFor(wardrobeTab).forEach((item) => grid.appendChild(kitRow(wardrobeTab, item, s)));
+
+    let items = NIAH.cosmetics.listFor(wardrobeTab);
+    if (wardrobeTab === 'outfit') {
+      renderOutfitCats(items, s);
+      items = items.filter((i) => i.cat === outfitCat);
+    } else {
+      E.outfitCats.hidden = true;
+    }
+    items.forEach((item) => grid.appendChild(kitRow(wardrobeTab, item, s)));
     grid.scrollTop = changedTab ? 0 : scroll;
-    if (force || changedTab) setWardrobeFoot(KIND_BLURB[wardrobeTab]);
+    if (force || changedTab) {
+      setWardrobeFoot(wardrobeTab === 'outfit' ? CAT_BLURB[outfitCat] : KIND_BLURB[wardrobeTab]);
+    }
   }
 
   /* ----------------------------------------------------------- misc */
@@ -337,7 +383,7 @@ NIAH.ui = (function () {
   return {
     init, screen, hudOn, setHud, setPileCard, setPrompt, setAction, setSense, setIntro,
     setMenu, setCameraLabel, renderShop, openShop, closeShop, shopIsOpen, showStats, showWin,
-    renderWardrobe,
+    renderWardrobe, syncOutfitCat,
     bumpCoins, fmt,
     get stick() { return E.stick; },
     get stickKnob() { return E.stickKnob; },

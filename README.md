@@ -20,7 +20,8 @@ network calls, no dependencies to install.
 | Pause | `Esc` | ⏸ button |
 
 1. Walk to a hay pile and **hold to dig** until your shovel is full.
-2. Carry the load to the **sifter** by the doors and dump it. Sifted hay pays coins.
+2. Carry the load to the **conveyor sifter** in the corner and tip it into the
+   hopper. The belt carries it to the crate, and sifted hay pays coins.
 3. The needle sits at a hidden depth inside one pile — sift that pile deep enough
    and it turns up. Digging the wrong pile is never wasted; it still pays.
 4. Spend coins on shovels and gear between barns. Bigger shovels unlock as you
@@ -30,7 +31,7 @@ network calls, no dependencies to install.
 
 - **A barn you walk around** — procedural low-poly barn interior and exterior,
   lanterns, dust in the light shafts, a farmhand with a hand-animated walk,
-  dig and dump cycle.
+  dig and dump cycle, and a conveyor sifter running in the corner.
 - **A walk-in cutscene** for every barn: the doors swing open, the camera
   follows you inside, and the barn number lands on screen. Skippable.
 - **Spatial search, not tapping.** Each barn has labelled piles (A, B, C…) and
@@ -41,7 +42,8 @@ network calls, no dependencies to install.
 - **8 shovels and 4 pieces of gear**: work boots, sifting screen, farmhands who
   keep digging while you walk, and the detector.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
-  13 outfits (camo, flags, hi-vis, one very loud pink), 13 hats (caps, cowboy,
+  19 outfits sorted into Colours, Flags and Other (camo, hi-vis, check, one very
+  loud pink), 13 hats (caps, cowboy,
   top hat, viking helm, a bunny head, a traffic cone, a crown, and the Polite
   Carrot mascot worn as a full head, smile and all) and 9 shovel skins (gold, trident,
   giant spoon, candy cane, diamond). Cosmetic only —

@@ -133,14 +133,13 @@ NIAH.player = (function () {
       }
     }
 
-    // the sifting cart
-    const c = world.cart;
+    // the sifter, whose footprint the world reports
+    const c = world.cart && world.cart.collide;
     if (c) {
-      const hx = 3.6, hz = 2.6;
       const dx = pos.x - c.x, dz = pos.z - c.z;
-      if (Math.abs(dx) < hx && Math.abs(dz) < hz) {
-        if (hx - Math.abs(dx) < hz - Math.abs(dz)) pos.x = c.x + Math.sign(dx || 1) * hx;
-        else pos.z = c.z + Math.sign(dz || 1) * hz;
+      if (Math.abs(dx) < c.hx && Math.abs(dz) < c.hz) {
+        if (c.hx - Math.abs(dx) < c.hz - Math.abs(dz)) pos.x = c.x + Math.sign(dx || 1) * c.hx;
+        else pos.z = c.z + Math.sign(dz || 1) * c.hz;
       }
     }
 
