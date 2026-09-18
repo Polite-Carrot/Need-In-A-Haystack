@@ -652,6 +652,21 @@ NIAH.game = (function () {
       input.y = -dy / R;
     }
 
+    // Mobile browsers zoom on a quick second tap and on pinch. Both wreck a
+    // game where tapping fast is the point, and iOS ignores user-scalable=no.
+    let lastTap = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      // leave real controls alone so a fast double-buy still registers
+      const onControl = e.target && e.target.closest && e.target.closest('button, .stick, .drawer-body');
+      if (now - lastTap <= 350 && !onControl) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
+    document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+      document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+    });
+
     window.addEventListener('resize', () => NIAH.world.resize());
     window.addEventListener('orientationchange', () => setTimeout(() => NIAH.world.resize(), 150));
     document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); if (phase === 'play') pause(true); } });
