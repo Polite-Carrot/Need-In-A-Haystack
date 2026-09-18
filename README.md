@@ -2,7 +2,7 @@
 
 A small 3D game about the world's least efficient search problem. You are a
 farmhand in a barn full of hay. A needle is buried in **one** of the piles. Walk
-over, dig it out one shovel-load at a time, sift it at the cart, and keep going
+over, dig it out one shovel-load at a time, sift it on the conveyor, and keep going
 until the needle turns up — then move to a bigger barn.
 
 Built with [three.js](https://threejs.org) (vendored, MIT). No build step, no
@@ -43,12 +43,13 @@ network calls, no dependencies to install.
   and farmhands — hired hands who actually walk the barn, each picking a pile,
   digging a load, carrying it to the conveyor and heading back for more.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
-  19 outfits sorted into Colours, Flags and Other (camo, hi-vis, check, one very
-  loud pink), 13 hats (caps, cowboy,
-  top hat, viking helm, a bunny head, a traffic cone, a crown, and the Polite
-  Carrot mascot worn as a full head, smile and all) and 9 shovel skins (gold, trident,
-  giant spoon, candy cane, diamond). Cosmetic only —
-  every dig stat still comes from the shop. Patterns are drawn procedurally at
+  29 outfits shelved under Colours, Flags (thirteen, named for the countries
+  they belong to) and Other (camo, hi-vis, check, one very loud pink); 13 hats
+  (caps, cowboy, top hat, viking helm, a bunny head, a traffic cone, a crown,
+  and the Polite Carrot mascot worn as a full head); 10 facial expressions from
+  Big Grin to Shades; and 9 shovel skins (gold, trident, giant spoon, candy
+  cane, diamond). The preview turns by itself and can be dragged round by hand.
+  Cosmetic only — every dig stat still comes from the shop. Patterns are drawn procedurally at
   runtime, so there are still no image assets in the repo.
 - Main menu, pause menu, first-person / follow camera toggle, synthesised sound
   effects (no audio files), and autosave to `localStorage`.
@@ -91,7 +92,7 @@ pick **`main`** and **`/ (root)`**.
 | `js/player.js` | Farmhand mesh, walk/dig animation, movement, camera rig |
 | `js/game.js` | State, economy, barn flow, digging, input, save/load |
 | `js/ui.js` | Screens, HUD, shop and wardrobe rendering |
-| `js/cosmetics.js` | Outfits, hats, shovel skins and their procedural textures |
+| `js/cosmetics.js` | Outfits, hats, faces, shovel skins and their procedural textures |
 | `js/wardrobe.js` | The My Farmer preview scene and its auto-framing |
 | `js/helpers.js` | Hired farmhands: their round trip, steering and animation |
 | `js/audio.js` | WebAudio sound effects |

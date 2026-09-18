@@ -245,6 +245,7 @@ NIAH.ui = (function () {
   const KIND_BLURB = {
     outfit: 'Shirt and trousers, sorted by the kind of statement you want.',
     hat: 'Sun protection, mostly. Some of it is not.',
+    face: 'How you look at a barn full of hay.',
     shovel: 'Looks only — your dug-per-second comes from the shop.',
   };
 
@@ -261,11 +262,17 @@ NIAH.ui = (function () {
 
     const sw = document.createElement('div');
     sw.className = 'kit-swatch';
-    (item.swatch || ['#888']).forEach((c) => {
-      const seg = document.createElement('span');
-      seg.style.background = c;
-      sw.appendChild(seg);
-    });
+    if (item.emoji) {
+      // expressions read as themselves; colour bars all look like skin
+      sw.classList.add('emoji');
+      sw.textContent = item.emoji;
+    } else {
+      (item.swatch || ['#888']).forEach((c) => {
+        const seg = document.createElement('span');
+        seg.style.background = c;
+        sw.appendChild(seg);
+      });
+    }
 
     const info = document.createElement('div');
     info.className = 'kit-info';

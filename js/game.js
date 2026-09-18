@@ -50,8 +50,8 @@ NIAH.game = (function () {
     started: Date.now(),
     camera: 'follow',
     muted: false,
-    look: { outfit: 'farmhand', hat: 'straw', shovel: 'auto' },
-    wardrobe: { outfit: ['farmhand'], hat: ['straw'], shovel: ['auto'] },
+    look: { outfit: 'farmhand', hat: 'straw', face: 'plain', shovel: 'auto' },
+    wardrobe: { outfit: ['farmhand'], hat: ['straw'], face: ['plain'], shovel: ['auto'] },
   };
 
   let phase = 'boot';            // boot | menu | intro | play | paused | win
@@ -95,9 +95,9 @@ NIAH.game = (function () {
     Object.assign(state, data);
     state.gear = Object.assign({ boots: 0, sense: 0, sift: 0, hands: 0 }, data.gear || {});
     // saves from before My Farmer arrive without a wardrobe
-    state.look = Object.assign({ outfit: 'farmhand', hat: 'straw', shovel: 'auto' }, data.look || {});
-    state.wardrobe = Object.assign({ outfit: ['farmhand'], hat: ['straw'], shovel: ['auto'] }, data.wardrobe || {});
-    ['outfit', 'hat', 'shovel'].forEach((kind) => {
+    state.look = Object.assign({ outfit: 'farmhand', hat: 'straw', face: 'plain', shovel: 'auto' }, data.look || {});
+    state.wardrobe = Object.assign({ outfit: ['farmhand'], hat: ['straw'], face: ['plain'], shovel: ['auto'] }, data.wardrobe || {});
+    ['outfit', 'hat', 'face', 'shovel'].forEach((kind) => {
       if (!Array.isArray(state.wardrobe[kind]) || !state.wardrobe[kind].length) {
         state.wardrobe[kind] = [NIAH.cosmetics.listFor(kind)[0].id];
       }
@@ -712,6 +712,29 @@ NIAH.game = (function () {
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', endDrag);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // drag the farmer round in My Farmer
+    const wardrobeEl = document.getElementById('wardrobe');
+    let turnId = null, turnX = 0;
+    wardrobeEl.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.wardrobe-panel, .wardrobe-top')) return;   // panel scrolls, not spins
+      turnId = e.pointerId;
+      turnX = e.clientX;
+      NIAH.wardrobe.grab();
+    });
+    wardrobeEl.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== turnId) return;
+      NIAH.wardrobe.turn(e.clientX - turnX);
+      turnX = e.clientX;
+    });
+    const endTurn = (e) => {
+      if (turnId !== null && e.pointerId !== turnId) return;
+      turnId = null;
+      NIAH.wardrobe.release();
+    };
+    wardrobeEl.addEventListener('pointerup', endTurn);
+    wardrobeEl.addEventListener('pointercancel', endTurn);
+    wardrobeEl.addEventListener('pointerleave', endTurn);
 
     // action button
     const btn = NIAH.ui.actionBtn;

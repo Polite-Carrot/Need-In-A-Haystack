@@ -20,6 +20,21 @@ NIAH.cosmetics = (function () {
     return tex;
   }
 
+  function bandsTex(key, colors, vertical, weights) {
+    const wts = weights || colors.map(() => 1);
+    const total = wts.reduce((a, b) => a + b, 0);
+    return canvasTex(key, vertical ? 120 : 90, vertical ? 80 : 120, (g, w, h) => {
+      let at = 0;
+      colors.forEach((c, i) => {
+        const size = (wts[i] / total) * (vertical ? w : h);
+        g.fillStyle = c;
+        if (vertical) g.fillRect(at, 0, Math.ceil(size), h);
+        else g.fillRect(0, at, w, Math.ceil(size));
+        at += size;
+      });
+    });
+  }
+
   function camoTex(key, colors) {
     return canvasTex(key, 128, 128, (g, w, h) => {
       g.fillStyle = colors[0];
@@ -62,6 +77,57 @@ NIAH.cosmetics = (function () {
       for (let i = 0; i < 4; i++) { g.fillRect(i * 16, 0, 7, h); g.fillRect(0, i * 16, w, 7); }
       g.fillStyle = 'rgba(255,230,200,.25)';
       for (let i = 0; i < 4; i++) { g.fillRect(i * 16 + 9, 0, 3, h); g.fillRect(0, i * 16 + 9, w, 3); }
+    }),
+    /* Simple band helper: colours across (vertical) or down (horizontal),
+       with optional weights for flags whose middle band is wider. */
+    flagIE: () => bandsTex('flagIE', ['#169B62', '#FFFFFF', '#FF883E'], true),
+    flagFR: () => bandsTex('flagFR', ['#002395', '#FFFFFF', '#ED2939'], true),
+    flagIT: () => bandsTex('flagIT', ['#008C45', '#F4F5F0', '#CD212A'], true),
+    flagDE: () => bandsTex('flagDE', ['#000000', '#DD0000', '#FFCE00'], false),
+    flagES: () => bandsTex('flagES', ['#AA151B', '#F1BF00', '#AA151B'], false, [1, 2, 1]),
+    flagJP: () => canvasTex('flagJP', 120, 80, (g, w, h) => {
+      g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#BC002D';
+      g.beginPath(); g.arc(w / 2, h / 2, h * 0.3, 0, 7); g.fill();
+    }),
+    flagCH: () => canvasTex('flagCH', 80, 80, (g, w, h) => {
+      g.fillStyle = '#D52B1E'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#FFFFFF';
+      g.fillRect(w * 0.4, h * 0.2, w * 0.2, h * 0.6);
+      g.fillRect(w * 0.2, h * 0.4, w * 0.6, h * 0.2);
+    }),
+    flagSE: () => canvasTex('flagSE', 128, 80, (g, w, h) => {
+      g.fillStyle = '#006AA7'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#FECC00';
+      g.fillRect(w * 0.28, 0, w * 0.13, h);
+      g.fillRect(0, h * 0.43, w, h * 0.16);
+    }),
+    flagCA: () => canvasTex('flagCA', 120, 60, (g, w, h) => {
+      g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#D80621';
+      g.fillRect(0, 0, w * 0.25, h); g.fillRect(w * 0.75, 0, w * 0.25, h);
+      // a maple leaf, near enough at this size
+      g.beginPath();
+      const cx = w / 2, cy = h * 0.54, r = h * 0.3;
+      for (let i = 0; i < 11; i++) {
+        const a = -Math.PI / 2 + (i / 11) * Math.PI * 2;
+        const rr = i % 2 ? r * 0.42 : r;
+        g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 1.05);
+      }
+      g.closePath(); g.fill();
+      g.fillRect(cx - w * 0.012, cy + r * 0.6, w * 0.024, h * 0.16);
+    }),
+    flagBR: () => canvasTex('flagBR', 120, 84, (g, w, h) => {
+      g.fillStyle = '#009B3A'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#FEDF00';
+      g.beginPath();
+      g.moveTo(w / 2, h * 0.1); g.lineTo(w * 0.9, h / 2);
+      g.lineTo(w / 2, h * 0.9); g.lineTo(w * 0.1, h / 2);
+      g.closePath(); g.fill();
+      g.fillStyle = '#002776';
+      g.beginPath(); g.arc(w / 2, h / 2, h * 0.22, 0, 7); g.fill();
+      g.strokeStyle = '#FFFFFF'; g.lineWidth = 3;
+      g.beginPath(); g.arc(w / 2, h * 0.68, h * 0.22, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
     }),
     flagUK: () => canvasTex('flagUK', 120, 60, (g, w, h) => {
       g.fillStyle = '#012169'; g.fillRect(0, 0, w, h);
@@ -152,10 +218,30 @@ NIAH.cosmetics = (function () {
     { id: 'ice', name: 'Ice Blue', cat: 'colour', price: 9000, desc: 'Cool head, warm barn.',
       shirt: { color: 0x9fd8e8 }, trousers: { color: 0x2f6c85 }, swatch: ['#9fd8e8', '#2f6c85'] },
 
-    { id: 'flagUK', name: 'Union Flag', cat: 'flag', price: 30000, desc: 'Hay and country.',
+    { id: 'flagUK', name: 'United Kingdom', cat: 'flag', price: 20000, desc: 'Hay and country.',
       shirt: { tex: 'flagUK' }, trousers: { color: 0x1d2b4a }, swatch: ['#012169', '#C8102E'] },
-    { id: 'flagUS', name: 'Stars & Stripes', cat: 'flag', price: 30000, desc: 'Barn of the free.',
+    { id: 'flagUS', name: 'United States', cat: 'flag', price: 20000, desc: 'Barn of the free.',
       shirt: { tex: 'flagUS' }, trousers: { color: 0x2c3358 }, swatch: ['#B22234', '#3C3B6E'] },
+    { id: 'flagIE', name: 'Ireland', cat: 'flag', price: 22000, desc: 'Forty shades of hay.',
+      shirt: { tex: 'flagIE' }, trousers: { color: 0x14432a }, swatch: ['#169B62', '#FF883E'] },
+    { id: 'flagFR', name: 'France', cat: 'flag', price: 22000, desc: 'Liberté, égalité, foin.',
+      shirt: { tex: 'flagFR' }, trousers: { color: 0x1b2447 }, swatch: ['#002395', '#ED2939'] },
+    { id: 'flagDE', name: 'Germany', cat: 'flag', price: 22000, desc: 'Heuhaufen, efficiently.',
+      shirt: { tex: 'flagDE' }, trousers: { color: 0x2b2b2b }, swatch: ['#DD0000', '#FFCE00'] },
+    { id: 'flagIT', name: 'Italy', cat: 'flag', price: 24000, desc: 'Ago nel pagliaio.',
+      shirt: { tex: 'flagIT' }, trousers: { color: 0x1f3a26 }, swatch: ['#008C45', '#CD212A'] },
+    { id: 'flagES', name: 'Spain', cat: 'flag', price: 24000, desc: 'Aguja en un pajar.',
+      shirt: { tex: 'flagES' }, trousers: { color: 0x4a2116 }, swatch: ['#AA151B', '#F1BF00'] },
+    { id: 'flagJP', name: 'Japan', cat: 'flag', price: 26000, desc: 'One needle, rising.',
+      shirt: { tex: 'flagJP' }, trousers: { color: 0x2b2b33 }, swatch: ['#FFFFFF', '#BC002D'] },
+    { id: 'flagCA', name: 'Canada', cat: 'flag', price: 26000, desc: 'Sorry about the hay.',
+      shirt: { tex: 'flagCA' }, trousers: { color: 0x4a1b1b }, swatch: ['#D80621', '#FFFFFF'] },
+    { id: 'flagSE', name: 'Sweden', cat: 'flag', price: 30000, desc: 'Flat-packed barn.',
+      shirt: { tex: 'flagSE' }, trousers: { color: 0x123b52 }, swatch: ['#006AA7', '#FECC00'] },
+    { id: 'flagCH', name: 'Switzerland', cat: 'flag', price: 34000, desc: 'Precision haystacking.',
+      shirt: { tex: 'flagCH' }, trousers: { color: 0x521818 }, swatch: ['#D52B1E', '#FFFFFF'] },
+    { id: 'flagBR', name: 'Brazil', cat: 'flag', price: 38000, desc: 'Ordem e progresso e feno.',
+      shirt: { tex: 'flagBR' }, trousers: { color: 0x14502b }, swatch: ['#009B3A', '#FEDF00'] },
     { id: 'jolly', name: 'Jolly Roger', cat: 'flag', price: 60000, desc: 'Yo ho ho and a bale of hay.',
       shirt: { tex: 'jolly' }, trousers: { color: 0x17150f }, swatch: ['#12100e', '#f4efe4'] },
 
@@ -392,6 +478,139 @@ NIAH.cosmetics = (function () {
     return g;
   }
 
+
+  /* ---------------------------------------------------------- faces */
+
+  /* All built on a 0.3 head: eyes sit at z 0.26-0.28, mouths just below.
+     Pieces are small, so shapes are kept blunt and readable at game size. */
+  const SKIN_DARK = 0x3a2a1c;
+
+  function eyeBall(x, y, r, squash) {
+    const m = new T.Mesh(new T.SphereGeometry(r, 10, 8), M(0x1a1410));
+    m.position.set(x, y, 0.245);
+    m.scale.y = squash || 1;
+    return m;
+  }
+  function eyeShut(x, y, w) {
+    const m = new T.Mesh(new T.BoxGeometry(w || 0.1, 0.022, 0.04), M(0x1a1410));
+    m.position.set(x, y, 0.27);
+    return m;
+  }
+  function brow(x, y, tilt) {
+    const m = new T.Mesh(new T.BoxGeometry(0.12, 0.028, 0.04), M(SKIN_DARK));
+    m.position.set(x, y, 0.27);
+    m.rotation.z = tilt;
+    return m;
+  }
+  function mouthArc(y, r, up, tube) {
+    const m = new T.Mesh(new T.TorusGeometry(r, tube || 0.023, 6, 14, Math.PI * 0.9), M(0x5a2b20));
+    m.position.set(0, y, 0.25);
+    m.rotation.z = up ? Math.PI : 0;     // PI opens the arc downward: a smile
+    return m;
+  }
+  function mouthLine(y, w) {
+    const m = new T.Mesh(new T.BoxGeometry(w || 0.13, 0.03, 0.04), M(0x5a2b20));
+    m.position.set(0, y, 0.265);
+    return m;
+  }
+
+  const FACES = [
+    { id: 'plain', name: 'Happy', emoji: '🙂', price: 0, swatch: ['#e8b98c', '#1a1410'], desc: 'The face you turned up with.',
+      build: () => {
+        const g = new T.Group();
+        g.add(eyeBall(-0.1, 0.06, 0.036), eyeBall(0.1, 0.06, 0.036), mouthArc(-0.02, 0.075, true));
+        return g;
+      } },
+    { id: 'grin', name: 'Big Grin', emoji: '😁', price: 600, swatch: ['#f4efe4', '#5a2b20'], desc: 'Found something, have we?',
+      build: () => {
+        const g = new T.Group();
+        const mouth = new T.Mesh(new T.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M(0x5a2b20));
+        mouth.position.set(0, -0.02, 0.23);
+        mouth.scale.set(1, 0.7, 0.5);
+        const teeth = new T.Mesh(new T.BoxGeometry(0.17, 0.03, 0.03), M(0xf8f4ea));
+        teeth.position.set(0, -0.025, 0.28);
+        g.add(eyeBall(-0.1, 0.07, 0.038), eyeBall(0.1, 0.07, 0.038), mouth, teeth);
+        return g;
+      } },
+    { id: 'focus', name: 'Focused', emoji: '🧐', price: 1500, swatch: ['#3a2a1c', '#1a1410'], desc: 'The needle is out there.',
+      build: () => {
+        const g = new T.Group();
+        g.add(eyeBall(-0.1, 0.05, 0.032, 0.6), eyeBall(0.1, 0.05, 0.032, 0.6),
+              brow(-0.1, 0.12, 0.22), brow(0.1, 0.12, -0.22), mouthLine(-0.05, 0.11));
+        return g;
+      } },
+    { id: 'wink', name: 'Wink', emoji: '😉', price: 3000, swatch: ['#1a1410', '#5a2b20'], desc: 'Knows exactly which pile.',
+      build: () => {
+        const g = new T.Group();
+        g.add(eyeBall(-0.1, 0.06, 0.036), eyeShut(0.1, 0.06), mouthArc(-0.02, 0.08, true));
+        return g;
+      } },
+    { id: 'surprise', name: 'Surprised', emoji: '😮', price: 5000, swatch: ['#f4efe4', '#5a2b20'], desc: 'It was in pile C all along.',
+      build: () => {
+        const g = new T.Group();
+        const o = new T.Mesh(new T.SphereGeometry(0.055, 10, 8), M(0x5a2b20));
+        o.position.set(0, -0.05, 0.25);
+        o.scale.set(0.8, 1.1, 0.5);
+        g.add(eyeBall(-0.1, 0.07, 0.048), eyeBall(0.1, 0.07, 0.048),
+              brow(-0.1, 0.16, -0.1), brow(0.1, 0.16, 0.1), o);
+        return g;
+      } },
+    { id: 'sleepy', name: 'Sleepy', emoji: '😴', price: 8000, swatch: ['#3a2a1c', '#e8b98c'], desc: 'Barn four of the day.',
+      build: () => {
+        const g = new T.Group();
+        g.add(eyeShut(-0.1, 0.06, 0.11), eyeShut(0.1, 0.06, 0.11),
+              brow(-0.1, 0.13, -0.18), brow(0.1, 0.13, 0.18), mouthArc(-0.06, 0.05, false));
+        return g;
+      } },
+    { id: 'grumpy', name: 'Grumpy', emoji: '😠', price: 14000, swatch: ['#5a2b20', '#3a2a1c'], desc: 'It is always the last pile.',
+      build: () => {
+        const g = new T.Group();
+        g.add(eyeBall(-0.1, 0.05, 0.034), eyeBall(0.1, 0.05, 0.034),
+              brow(-0.1, 0.13, -0.42), brow(0.1, 0.13, 0.42), mouthArc(-0.07, 0.07, false));
+        return g;
+      } },
+    { id: 'tongue', name: 'Tongue Out', emoji: '😛', price: 22000, swatch: ['#ff8fa3', '#1a1410'], desc: 'Hay tastes fine, actually.',
+      build: () => {
+        const g = new T.Group();
+        const tongue = new T.Mesh(new T.BoxGeometry(0.1, 0.13, 0.06), M(0xff8fa3));
+        tongue.position.set(0.01, -0.13, 0.245);
+        tongue.rotation.x = 0.45;
+        g.add(eyeShut(-0.1, 0.07, 0.1), eyeBall(0.1, 0.06, 0.036), mouthLine(-0.045, 0.12), tongue);
+        return g;
+      } },
+    { id: 'stache', name: 'Moustache', emoji: '🥸', price: 40000, swatch: ['#3a2a1c', '#e8b98c'], desc: 'Grown over four barns.',
+      build: () => {
+        const g = new T.Group();
+        const bar = new T.Mesh(new T.BoxGeometry(0.19, 0.045, 0.05), M(SKIN_DARK));
+        bar.position.set(0, -0.045, 0.26);
+        for (const sx of [-1, 1]) {
+          const tip = new T.Mesh(new T.BoxGeometry(0.05, 0.06, 0.05), M(SKIN_DARK));
+          tip.position.set(sx * 0.105, -0.03, 0.25);
+          tip.rotation.z = sx * 0.5;
+          g.add(tip);
+        }
+        g.add(eyeBall(-0.1, 0.07, 0.036), eyeBall(0.1, 0.07, 0.036), bar, mouthArc(-0.1, 0.06, true));
+        return g;
+      } },
+    { id: 'shades', name: 'Shades', emoji: '😎', price: 70000, unlock: 5, swatch: ['#14131a', '#ffcf4d'], desc: 'The barn just got cooler.',
+      build: () => {
+        const g = new T.Group();
+        const frame = new T.Mesh(new T.BoxGeometry(0.3, 0.02, 0.04), M(0x14131a));
+        frame.position.set(0, 0.11, 0.265);
+        for (const sx of [-1, 1]) {
+          const lens = new T.Mesh(new T.BoxGeometry(0.115, 0.075, 0.03), M(0x14131a));
+          lens.position.set(sx * 0.082, 0.06, 0.265);
+          lens.rotation.z = sx * 0.06;
+          const shine = new T.Mesh(new T.BoxGeometry(0.03, 0.05, 0.02), M(0x6d7a86));
+          shine.position.set(sx * 0.082 - 0.03, 0.065, 0.285);
+          shine.rotation.z = 0.5;
+          g.add(lens, shine);
+        }
+        g.add(frame, mouthArc(-0.06, 0.07, true));
+        return g;
+      } },
+  ];
+
   /* ------------------------------------------------------- shovels */
 
   function hayLoad(y, w) {
@@ -466,21 +685,34 @@ NIAH.cosmetics = (function () {
       build: () => {
         const g = new T.Group();
         const white = M(0xf4efe4), red = M(0xd8384f);
-        for (let i = 0; i < 9; i++) {
-          const seg = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, 0.21, 8), i % 2 ? red : white);
-          seg.position.y = -0.2 - i * 0.21;
+        const stripe = (i) => (i % 2 ? red : white);
+
+        // straight shaft
+        for (let i = 0; i < 7; i++) {
+          const seg = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, 0.22, 8), stripe(i));
+          seg.position.y = -0.18 - i * 0.21;
           g.add(seg);
         }
-        const hook = new T.Mesh(new T.TorusGeometry(0.26, 0.07, 6, 12, Math.PI), red);
-        hook.position.y = -2.15;
-        hook.rotation.set(Math.PI / 2, 0, 0);
-        hook.rotation.y = Math.PI;
-        const blade = new T.Mesh(new T.BoxGeometry(0.5, 0.5, 0.1), white);
-        blade.position.y = -2.25;
-        blade.visible = false;
-        const load = hayLoad(-2.2, 0.44);
-        g.add(hook, blade, load);
-        return { group: g, blade, load };
+
+        /* The hook is the scoop: a half circle of striped segments curving
+           down and forward from the bottom of the shaft, cradling the hay.
+           Each segment is turned to the tangent — rotating +Y by the angle
+           lands it along (-sin a, cos a), which is exactly the tangent. */
+        const R = 0.32, CX = R, CY = -1.62, N = 9;
+        let mid = null;
+        for (let i = 0; i <= N; i++) {
+          const a = Math.PI + (i / N) * Math.PI;
+          const seg = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, 0.2, 8), stripe(i));
+          seg.position.set(CX + Math.cos(a) * R, CY + Math.sin(a) * R, 0);
+          seg.rotation.z = a;
+          g.add(seg);
+          if (i === Math.floor(N / 2)) mid = seg;
+        }
+
+        const load = hayLoad(CY - R + 0.18, 0.4);
+        load.position.x = CX;
+        g.add(load);
+        return { group: g, blade: mid, load };
       } },
     { id: 'trident', name: 'Trident', price: 120000, swatch: ['#7fe3d4', '#ffcf4d'], desc: 'Ruler of hay and sea.',
       build: () => {
@@ -537,6 +769,13 @@ NIAH.cosmetics = (function () {
     (p.outfitMats || []).forEach((m) => m.dispose());
     p.outfitMats = [shirtMat, trouserMat];
 
+    // face
+    if (p.faceAnchor) {
+      if (p.face) { p.faceAnchor.remove(p.face); disposeTree(p.face); }
+      p.face = byId(FACES, look.face).build();
+      p.faceAnchor.add(p.face);
+    }
+
     // hat
     if (p.hat) { p.hatAnchor.remove(p.hat); disposeTree(p.hat); }
     p.hat = byId(HATS, look.hat).build();
@@ -574,8 +813,11 @@ NIAH.cosmetics = (function () {
     return item ? item.price : 0;
   }
   function listFor(kind) {
-    return kind === 'outfit' ? OUTFITS : kind === 'hat' ? HATS : SHOVEL_SKINS;
+    return kind === 'outfit' ? OUTFITS
+      : kind === 'hat' ? HATS
+      : kind === 'face' ? FACES
+      : SHOVEL_SKINS;
   }
 
-  return { OUTFITS, OUTFIT_CATS, HATS, SHOVEL_SKINS, applyLook, listFor, priceOf, byId };
+  return { OUTFITS, OUTFIT_CATS, HATS, FACES, SHOVEL_SKINS, applyLook, listFor, priceOf, byId };
 })();

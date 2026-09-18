@@ -54,6 +54,13 @@ NIAH.player = (function () {
     hips.add(head);
     p.head = head;
 
+    // faces are built by the cosmetics module and hung on the head itself,
+    // so they turn with it
+    const faceAnchor = new T.Group();
+    head.add(faceAnchor);
+    p.faceAnchor = faceAnchor;
+    p.face = null;
+
     // hats are built by the cosmetics module and hung off this anchor
     const hatAnchor = new T.Group();
     hatAnchor.position.y = 1.4;

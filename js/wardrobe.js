@@ -5,6 +5,9 @@ window.NIAH = window.NIAH || {};
 NIAH.wardrobe = (function () {
   const T = THREE;
   let scene = null, camera = null, rig = null, root = null, spin = 0, t = 0;
+  // drag-to-turn: while a finger is down the idle spin stops, and letting go
+  // carries the throw on before easing back into the slow turn
+  let dragging = false, dragVel = 0, sinceDrag = 99;
 
   function ensure() {
     if (scene) return;
@@ -58,10 +61,36 @@ NIAH.wardrobe = (function () {
     measure();
   }
 
+  function grab() { dragging = true; dragVel = 0; }
+  function turn(dx) {
+    if (!dragging) return;
+    const step = dx * 0.011;
+    spin += step;
+    dragVel = step;
+  }
+  function release() {
+    if (!dragging) return;
+    dragging = false;
+    sinceDrag = 0;
+  }
+
   function update(dt) {
     if (!rig) return;
     t += dt;
-    spin += dt * 0.55;
+
+    if (dragging) {
+      dragVel *= 0.85;                       // settle while held still
+    } else {
+      sinceDrag += dt;
+      if (Math.abs(dragVel) > 0.0004) {
+        spin += dragVel;                     // throw carries on
+        dragVel *= Math.pow(0.05, dt);
+      } else {
+        dragVel = 0;
+        // ease the idle turn back in rather than snapping to it
+        spin += dt * 0.55 * Math.min(1, Math.max(0, (sinceDrag - 0.8) / 1.2));
+      }
+    }
     rig.group.rotation.y = spin;
     rig.parts.hips.position.y = 0.95 + Math.sin(t * 1.6) * 0.025;
     rig.parts.armL.rotation.x = Math.sin(t * 1.6) * 0.06;
@@ -115,5 +144,10 @@ NIAH.wardrobe = (function () {
   }
 
   // exposed so the framing can be checked from a test
-  return { open, preview, update, render, get __camera() { return camera; }, get __root() { return root; } };
+  return {
+    open, preview, update, render, grab, turn, release,
+    get __camera() { return camera; },
+    get __root() { return root; },
+    get __spin() { return spin; },
+  };
 })();
