@@ -284,6 +284,57 @@ NIAH.cosmetics = (function () {
         g.add(cone, base, stripe);
         return g;
       } },
+    { id: 'carrot', name: 'Polite Carrot', price: 120000, unlock: 6, swatch: ['#FF6B1A', '#65B84F'],
+      desc: 'The house mascot, smile and all.',
+      build: () => {
+        const g = new T.Group();
+        g.rotation.z = -0.14;            // the logo sits at a jaunty 8 degrees
+
+        // body: a carrot standing on its tip, wide end up, as in the logo
+        const H = 1.12, R = 0.36, BASE = 0.02;
+        const body = new T.Mesh(new T.ConeGeometry(R, H, 14), M(0xff6b1a));
+        body.rotation.x = Math.PI;       // apex down
+        body.position.y = BASE + H / 2;
+        g.add(body);
+        // radius of the carrot at a given height, for placing things on it
+        const at = (y) => R * ((y - BASE) / H);
+
+        // leaves
+        const leaves = [[0x65b84f, -0.45, 0.5], [0x4b9d43, 0.42, 0.56], [0x7bcb59, -0.02, 0.44]];
+        leaves.forEach(([col, lean, len], i) => {
+          const leaf = new T.Mesh(new T.ConeGeometry(0.1, len, 7), M(col, true));
+          leaf.position.set(Math.sin(lean) * 0.17, BASE + H + Math.cos(lean) * len * 0.42, (i === 2 ? -0.08 : 0.04));
+          leaf.rotation.z = -lean;
+          leaf.rotation.x = i === 2 ? -0.28 : 0.12;
+          g.add(leaf);
+        });
+
+        // face
+        const eyeY = 0.7;
+        for (const sx of [-1, 1]) {
+          const eye = new T.Mesh(new T.SphereGeometry(0.052, 10, 8), M(0x111111));
+          eye.scale.y = 1.3;
+          eye.position.set(sx * 0.085, eyeY, at(eyeY) * 0.82);
+          const glint = new T.Mesh(new T.SphereGeometry(0.02, 6, 5), M(0xffffff));
+          glint.position.set(sx * 0.085 - 0.02, eyeY + 0.03, at(eyeY) * 0.82 + 0.05);
+          g.add(eye, glint);
+        }
+        const smileY = 0.55;
+        const smile = new T.Mesh(new T.TorusGeometry(0.085, 0.017, 6, 14, Math.PI * 0.82), M(0x421a12));
+        smile.position.set(0, smileY + 0.03, at(smileY) * 0.84);
+        smile.rotation.z = Math.PI + Math.PI * 0.09;   // closed, turned up at the ends
+        g.add(smile);
+
+        // the little root dashes down the sides
+        [[0.52, -1], [0.36, 1], [0.24, -1]].forEach(([y, sx]) => {
+          const dash = new T.Mesh(new T.CylinderGeometry(0.013, 0.013, 0.075, 5), M(0xd9470b));
+          dash.position.set(sx * at(y) * 0.6, y, at(y) * 0.5);
+          dash.rotation.z = Math.PI / 2 - sx * 0.5;
+          g.add(dash);
+        });
+
+        return g;
+      } },
     { id: 'crown', name: 'Golden Crown', price: 250000, unlock: 8, swatch: ['#ffcf4d', '#ff4d6d'], desc: 'King of the haystack.',
       build: () => {
         const g = new T.Group();
