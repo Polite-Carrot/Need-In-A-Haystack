@@ -5,6 +5,8 @@ finding a needle in a haystack, one shovelful at a time.
 
 Pure HTML/CSS/JS — no build step, no dependencies. Open `index.html` and dig.
 
+**▶ Play it: https://polite-carrot.github.io/Need-In-A-Haystack/**
+
 ## How to play
 
 1. **Tap the haystack** to load hay into your shovel.
@@ -35,6 +37,16 @@ Just open `index.html` in a browser. To serve it locally instead:
 ```sh
 npx serve .     # or: python3 -m http.server
 ```
+
+## Hosting on GitHub Pages
+
+The site is the repository root on `main` — plain static files, no build step, all
+asset paths relative, so it works from a project subpath. `.nojekyll` keeps Pages
+from running the files through Jekyll.
+
+To turn it on: **Settings → Pages → Build and deployment → Source: Deploy from a
+branch**, then pick **`main`** and **`/ (root)`** and save. The first build takes a
+minute; after that every push to `main` redeploys automatically.
 
 Progress is saved in `localStorage` under `needleInHaystack.save.v1`. The
 **Reset everything** button in the stats panel (📊) wipes it.
