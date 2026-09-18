@@ -1,4 +1,4 @@
-/* Need in a Haystack — game state, barn flow, digging, economy, main loop. */
+/* Needle in a Haystack — game state, barn flow, digging, economy, main loop. */
 window.NIAH = window.NIAH || {};
 
 NIAH.data = {
@@ -25,7 +25,7 @@ NIAH.data = {
     sift:  { name: 'Sifting Screen', emoji: '🕸️', max: 10, base: 600, growth: 2.8,
              desc: (l) => l ? `×1.25 coins per hay (now ×${Math.pow(1.25, l).toFixed(2)})` : 'Sifted hay pays more' },
     hands: { name: 'Farmhand',     emoji: '👨‍🌾', max: 4,  base: 4000, growth: 3.2,
-             desc: (l) => l ? `${l} hired — they slowly sift the biggest pile` : 'Hire help that keeps digging while you walk' },
+             desc: (l) => l ? `${l} working the barn with you` : 'Hire a hand who digs and carries while you do' },
   },
 };
 
@@ -139,6 +139,8 @@ NIAH.game = (function () {
     lv.piles.forEach((p, i) => NIAH.world.setPileVisual(NIAH.world.piles[i], p.hay / p.total));
     NIAH.world.setCartFill(0);
     NIAH.world.setNeedleGlow(state.gear.sense >= 3 ? NIAH.world.piles[lv.needlePile] : null);
+    NIAH.helpers.sync(state.gear.hands);
+    NIAH.helpers.reset();
     NIAH.player.applyLook(state.look, state.shovel);
     NIAH.player.setLoadVisual(lv.loadTotal / capacity());   // a resumed save can arrive mid-load
   }
@@ -155,6 +157,7 @@ NIAH.game = (function () {
       intro.done = false;
       NIAH.player.place(0, L.doorZ + 16, Math.PI);
       NIAH.player.camYaw = Math.PI;
+      NIAH.helpers.setVisible(false);
       NIAH.world.setDoorOpen(0);
       NIAH.ui.screen('intro', true);
       NIAH.ui.hudOn(false);
@@ -175,6 +178,7 @@ NIAH.game = (function () {
     NIAH.ui.screen('intro', false);
     NIAH.ui.hudOn(true);
     NIAH.player.updateCamera(NIAH.world.camera, 1, state.camera, true, NIAH.world.bounds);
+    NIAH.helpers.setVisible(true);
     phase = 'play';
     intro.done = true;
   }
@@ -305,31 +309,37 @@ NIAH.game = (function () {
 
   /* ---------------------------------------------------------- hands */
 
+  const helperApi = {
+    ratePerHelper: () => digRate() * 0.12,
+    piles: () => state.lv.piles,
+    takeFromPile(i, amount) {
+      const data = state.lv.piles[i];
+      if (!data) return 0;
+      const got = Math.min(amount, data.hay);
+      if (got <= 0) return 0;
+      data.hay -= got;
+      NIAH.world.setPileVisual(NIAH.world.piles[i], data.hay / data.total);
+      return got;
+    },
+    deliver(i, amount) {
+      const lv = state.lv;
+      const data = lv.piles[i];
+      if (!data || amount <= 0) return;
+      const before = data.sifted;
+      data.sifted = Math.min(data.total, data.sifted + amount);
+      if (before === 0 && data.sifted > 0) lv.opened++;
+      lv.sifted += amount;
+      state.totalHay += amount;
+      state.coins += Math.max(1, Math.floor(amount * coinsPerHay()));
+      NIAH.world.sifterLoad(2);
+      if (i === lv.needlePile && data.sifted >= lv.needleDepth) winLevel(true);
+    },
+  };
+
   function farmhands(dt) {
-    if (!state.gear.hands || phase !== 'play') return;
-    const lv = state.lv;
-    handBank += state.gear.hands * digRate() * 0.12 * dt;
-    if (handBank < 1) return;
-    let n = Math.floor(handBank);
-    handBank -= n;
-
-    // they work the fullest pile
-    let target = -1, most = 0;
-    lv.piles.forEach((p, i) => { if (p.hay > most) { most = p.hay; target = i; } });
-    if (target < 0) return;
-    const data = lv.piles[target];
-    n = Math.min(n, data.hay);
-    if (n <= 0) return;
-
-    const before = data.sifted;
-    data.hay -= n;
-    data.sifted = Math.min(data.total, data.sifted + n);
-    if (before === 0 && data.sifted > 0) lv.opened++;
-    lv.sifted += n;
-    state.totalHay += n;
-    state.coins += Math.max(1, Math.floor(n * coinsPerHay()));
-    NIAH.world.setPileVisual(NIAH.world.piles[target], data.hay / data.total);
-    if (target === lv.needlePile && data.sifted >= lv.needleDepth) winLevel(true);
+    if (phase !== 'play') return;
+    NIAH.helpers.sync(state.gear.hands);
+    NIAH.helpers.update(dt, helperApi);
   }
 
   /* ----------------------------------------------------------- sense */
@@ -416,6 +426,7 @@ NIAH.game = (function () {
 
   function quitToMenu() {
     save();
+    NIAH.helpers.setVisible(false);
     phase = 'menu';
     NIAH.ui.screen('pause', false);
     NIAH.ui.closeShop();
@@ -472,6 +483,10 @@ NIAH.game = (function () {
     state.coins -= price;
     state.gear[key]++;
     NIAH.audio.buy();
+    if (key === 'hands' && state.lv) {
+      NIAH.helpers.sync(state.gear.hands);
+      NIAH.helpers.setVisible(phase === 'play' || phase === 'paused');
+    }
     if (key === 'sense' && state.gear.sense >= 3 && state.lv) {
       NIAH.world.setNeedleGlow(NIAH.world.piles[state.lv.needlePile]);
     }

@@ -1,4 +1,4 @@
-# 🌾 Need in a Haystack
+# 🌾 Needle in a Haystack
 
 A small 3D game about the world's least efficient search problem. You are a
 farmhand in a barn full of hay. A needle is buried in **one** of the piles. Walk
@@ -39,8 +39,9 @@ network calls, no dependencies to install.
   the pile you're standing at.
 - **Needle Sense** — a detector that tells you how close you are, then which pile
   you're standing at, then marks the pile outright at level 3.
-- **8 shovels and 4 pieces of gear**: work boots, sifting screen, farmhands who
-  keep digging while you walk, and the detector.
+- **8 shovels and 4 pieces of gear**: work boots, sifting screen, the detector,
+  and farmhands — hired hands who actually walk the barn, each picking a pile,
+  digging a load, carrying it to the conveyor and heading back for more.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
   19 outfits sorted into Colours, Flags and Other (camo, hi-vis, check, one very
   loud pink), 13 hats (caps, cowboy,
@@ -92,6 +93,7 @@ pick **`main`** and **`/ (root)`**.
 | `js/ui.js` | Screens, HUD, shop and wardrobe rendering |
 | `js/cosmetics.js` | Outfits, hats, shovel skins and their procedural textures |
 | `js/wardrobe.js` | The My Farmer preview scene and its auto-framing |
+| `js/helpers.js` | Hired farmhands: their round trip, steering and animation |
 | `js/audio.js` | WebAudio sound effects |
 | `assets/` | Polite Carrot logo and wordmark for the boot lockup |
 | `vendor/three.min.js` | three.js r160 (MIT, see `vendor/three.LICENSE`) |
