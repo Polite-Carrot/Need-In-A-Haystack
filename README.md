@@ -8,7 +8,7 @@ until the needle turns up — then move to a bigger barn.
 Built with [three.js](https://threejs.org) (vendored, MIT). No build step, no
 network calls, no dependencies to install.
 
-**▶ Play it: https://polite-carrot.github.io/Need-In-A-Haystack/**
+**▶ Play it: https://polite-carrot.github.io/Needle-In-A-Haystack/**
 
 ## How to play
 
