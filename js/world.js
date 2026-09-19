@@ -29,7 +29,7 @@ NIAH.world = (function () {
   let renderer, scene, camera, canvas;
   let levelGroup = null, exterior = null, dust = null;
   const disposables = [];
-  const state = { layout: null, piles: [], cart: null, doors: [], doorOpen: 0, bounds: null, needleGlow: null };
+  const state = { layout: null, piles: [], cart: null, doors: [], doorOpen: 0, bounds: null, needle: null };
   const bursts = [];
 
   /* ------------------------------------------------------------ setup */
@@ -192,7 +192,7 @@ NIAH.world = (function () {
     levelGroup = null;
     state.piles = [];
     state.doors = [];
-    state.needleGlow = null;
+    state.needle = null;
   }
 
   function layoutFor(pileCount) {
@@ -550,17 +550,76 @@ NIAH.world = (function () {
     }
   }
 
-  function setNeedleGlow(pile) {
-    if (state.needleGlow) {
-      state.needleGlow.parent.remove(state.needleGlow);
-      state.needleGlow.geometry.dispose();
-      state.needleGlow = null;
-    }
-    if (!pile) return;
-    const glow = new T.Mesh(new T.SphereGeometry(0.5, 12, 10), new T.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.9 }));
-    glow.position.set(0, 6.6, 0);
-    pile.group.add(glow);
-    state.needleGlow = glow;
+  /* The needle itself, once enough hay is off the pile for it to show. It is
+     parented to the level rather than the pile, so it stays put when the pile
+     it came out of is dug away entirely. */
+  function glowTexture() {
+    return canvasTex('needleGlow', 128, 128, (g, w, h) => {
+      const rg = g.createRadialGradient(64, 64, 2, 64, 64, 62);
+      rg.addColorStop(0, 'rgba(255,255,240,.95)');
+      rg.addColorStop(0.25, 'rgba(255,240,180,.5)');
+      rg.addColorStop(1, 'rgba(255,220,120,0)');
+      g.fillStyle = rg;
+      g.fillRect(0, 0, w, h);
+    });
+  }
+
+  function canvasTex(key, w, h, draw) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const tex = new T.CanvasTexture(c);
+    tex.colorSpace = T.SRGBColorSpace;
+    return tex;
+  }
+
+  function showNeedle(pileIndex, ox, oz) {
+    hideNeedle();
+    const pile = state.piles[pileIndex];
+    if (!pile || !levelGroup) return;
+
+    const g = new T.Group();
+    const steel = new T.MeshLambertMaterial({ color: 0xeef3f7, flatShading: true });
+    const shaft = new T.Mesh(new T.CylinderGeometry(0.035, 0.012, 0.95, 6), steel);
+    shaft.position.y = 0.42;
+    const eye = new T.Mesh(new T.TorusGeometry(0.075, 0.028, 6, 10), steel);
+    eye.position.y = 0.92;
+    eye.rotation.y = Math.PI / 2;
+    g.add(shaft, eye);
+    g.rotation.z = 0.5;
+    g.rotation.y = Math.random() * Math.PI;
+
+    const glow = new T.Sprite(new T.SpriteMaterial({
+      map: glowTexture(), transparent: true, depthWrite: false,
+      blending: T.AdditiveBlending, opacity: 0.9,
+    }));
+    glow.scale.set(3.2, 3.2, 1);
+    glow.position.y = 0.6;
+    g.add(glow);
+
+    const light = new T.PointLight(0xfff0c0, 26, 16, 2);
+    light.position.y = 0.8;
+    g.add(light);
+
+    g.position.set(pile.x + ox, 0, pile.z + oz);
+    levelGroup.add(g);
+    state.needle = { group: g, glow, light, pileIndex, ox, oz, radial: Math.hypot(ox, oz) };
+    return g;
+  }
+
+  function hideNeedle() {
+    const n = state.needle;
+    if (!n) return;
+    if (n.group.parent) n.group.parent.remove(n.group);
+    n.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    n.glow.material.map.dispose();
+    n.glow.material.dispose();
+    state.needle = null;
+  }
+
+  function needlePosition() {
+    const n = state.needle;
+    return n ? n.group.position : null;
   }
 
   function hayBurst(x, y, z, n) {
@@ -595,10 +654,25 @@ NIAH.world = (function () {
       dust.rotation.y = time * 0.01;
       dust.position.y = Math.sin(time * 0.3) * 0.25;
     }
-    // needle glow bobs
-    if (state.needleGlow) {
-      state.needleGlow.position.y = 6.4 + Math.sin(time * 2.5) * 0.35;
-      state.needleGlow.material.opacity = 0.6 + Math.sin(time * 5) * 0.3;
+    // The needle rides the surface of what is left of its pile — never buried
+    // inside the cone, and left on the floor once the pile is gone entirely.
+    const n = state.needle;
+    if (n) {
+      const pile = state.piles[n.pileIndex];
+      let surface = 0.1;
+      if (pile && pile.group.visible) {
+        const par = pile.cone.geometry.parameters;
+        const sc = pile.cone.scale.x, h = pile.cone.userData.h * pile.cone.scale.y;
+        const rTop = par.radiusTop * sc, rBot = par.radiusBottom * sc;
+        const t = (rBot - n.radial) / Math.max(0.001, rBot - rTop);
+        surface = Math.max(0.1, h * Math.max(0, Math.min(1, t)));
+      }
+      n.group.position.y = surface + Math.sin(time * 2.2) * 0.07;
+      n.group.rotation.y += dt * 0.7;
+      const pulse = 0.55 + Math.abs(Math.sin(time * 2.4)) * 0.45;
+      n.glow.material.opacity = pulse;
+      n.glow.scale.setScalar(2.8 + pulse * 0.8);
+      n.light.intensity = 18 + pulse * 16;
     }
     // straw bursts
     for (let i = bursts.length - 1; i >= 0; i--) {
@@ -624,7 +698,7 @@ NIAH.world = (function () {
   return {
     init, resize, render, renderTo, update,
     buildLevel, layoutFor,
-    setPileVisual, setCartFill, setNeedleGlow, setDoorOpen, hayBurst, sifterLoad,
+    setPileVisual, setCartFill, showNeedle, hideNeedle, needlePosition, setDoorOpen, hayBurst, sifterLoad,
     get scene() { return scene; },
     get camera() { return camera; },
     get piles() { return state.piles; },

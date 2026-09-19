@@ -22,8 +22,9 @@ network calls, no dependencies to install.
 1. Walk to a hay pile and **hold to dig** until your shovel is full.
 2. Carry the load to the **conveyor sifter** in the corner and tip it into the
    hopper. The belt carries it to the crate, and sifted hay pays coins.
-3. The needle sits at a hidden depth inside one pile — sift that pile deep enough
-   and it turns up. Digging the wrong pile is never wasted; it still pays.
+3. The needle is buried at a hidden depth in one pile. Dig that pile down far
+   enough and you will **see it** lying in what is left, glinting — walk over
+   and grab it. Digging the wrong pile is never wasted; it still pays.
 4. Spend coins on shovels and gear between barns. Bigger shovels unlock as you
    clear barns, so the farm opens up gradually rather than all at once.
 
@@ -35,10 +36,16 @@ network calls, no dependencies to install.
 - **A walk-in cutscene** for every barn: the doors swing open, the camera
   follows you inside, and the barn number lands on screen. Skippable.
 - **Spatial search, not tapping.** Each barn has labelled piles (A, B, C…) and
-  exactly one holds the needle. The pile card shows how deeply you have searched
-  the pile you're standing at.
-- **Needle Sense** — a detector that tells you how close you are, then which pile
-  you're standing at, then marks the pile outright at level 3.
+  exactly one holds the needle, at its own depth and its own spot inside the
+  pile. The pile card shows how far down you have dug the pile you're standing
+  at. The needle is a real object: uncover it and it lies there in the hay
+  until you pick it up — your hired hands can dig it out for you, but only you
+  can take it.
+- **Needle Sense** — a detector that reads how far off the needle is *from where
+  you stand*, and never names the pile. One reading narrows it to a ring around
+  you; walk somewhere else, take another, and the rings cross. Levels buy
+  precision — warm/hot/burning, then metres to the nearest five, then metres —
+  not the answer.
 - **8 shovels and 4 pieces of gear**: work boots, sifting screen, the detector,
   and farmhands — hired hands who actually walk the barn, each picking a pile,
   digging a load, carrying it to the conveyor and heading back for more.

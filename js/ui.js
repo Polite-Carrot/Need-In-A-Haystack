@@ -119,8 +119,9 @@ NIAH.ui = (function () {
     if (!pile) { E.pileCard.hidden = true; return; }
     E.pileCard.hidden = false;
     E.pileName.textContent = 'Pile ' + pile.name;
-    const pct = pile.total ? (pile.sifted / pile.total) * 100 : 0;
-    E.pileSearched.textContent = Math.floor(pct) + '% searched';
+    // digging is what uncovers the needle, so the card tracks hay off the pile
+    const pct = pile.total ? ((pile.total - pile.hay) / pile.total) * 100 : 0;
+    E.pileSearched.textContent = Math.floor(pct) + '% dug out';
     E.pileFill.style.width = pct.toFixed(1) + '%';
   }
 

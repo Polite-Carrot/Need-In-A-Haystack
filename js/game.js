@@ -17,10 +17,10 @@ NIAH.data = {
              desc: (l) => l ? `+${l * 14}% walking speed` : 'Walk faster between pile and cart' },
     sense: { name: 'Needle Sense', emoji: '📡', max: 3,  base: 1500, growth: 10,
              desc: (l) => [
-               'A detector that reacts near the needle',
-               'Lv 1: tells you how close the needle is',
-               'Lv 2: also confirms the pile you are standing at',
-               'Lv 3: marks the needle pile from anywhere',
+               'Reads how far off the needle is. Take readings from two spots and the rings cross',
+               'Lv 1: warm / hot / burning, from where you stand',
+               'Lv 2: the distance, to the nearest five metres',
+               'Lv 3: the distance, to the metre',
              ][l] },
     sift:  { name: 'Sifting Screen', emoji: '🕸️', max: 10, base: 600, growth: 2.8,
              desc: (l) => l ? `×1.25 coins per hay (now ×${Math.pow(1.25, l).toFixed(2)})` : 'Sifted hay pays more' },
@@ -103,6 +103,17 @@ NIAH.game = (function () {
       }
       if (!state.wardrobe[kind].includes(state.look[kind])) state.look[kind] = state.wardrobe[kind][0];
     });
+    if (state.lv && !state.lv.needle) {
+      const legacy = state.lv;
+      const total = (legacy.piles[0] && legacy.piles[0].total) || 1;
+      state.lv.needle = {
+        pile: legacy.needlePile || 0,
+        depth: Math.max(0.3, Math.min(0.9, (legacy.needleDepth || total * 0.6) / total)),
+        ox: (Math.random() - 0.5) * 3.4,
+        oz: (Math.random() - 0.5) * 3.4,
+        revealed: false,
+      };
+    }
     if (!Array.isArray(state.owned) || !state.owned.length) state.owned = [0];
     state.shovel = Math.max(0, Math.min(D.SHOVELS.length - 1, state.shovel | 0));
     NIAH.audio.muted = !!state.muted;
@@ -123,8 +134,14 @@ NIAH.game = (function () {
     return {
       level,
       piles,
-      needlePile: Math.floor(Math.random() * count),
-      needleDepth: Math.max(1, Math.floor(hay * (0.25 + Math.random() * 0.7))),
+      // the needle has a place inside its pile: how far down, and whereabouts
+      needle: {
+        pile: Math.floor(Math.random() * count),
+        depth: 0.3 + Math.random() * 0.6,        // fraction of the pile dug before it shows
+        ox: (Math.random() - 0.5) * 3.4,
+        oz: (Math.random() - 0.5) * 3.4,
+        revealed: false,
+      },
       load: [],
       loadTotal: 0,
       startedAt: Date.now(),
@@ -138,7 +155,8 @@ NIAH.game = (function () {
     NIAH.world.buildLevel({ level: lv.level, piles: lv.piles });
     lv.piles.forEach((p, i) => NIAH.world.setPileVisual(NIAH.world.piles[i], p.hay / p.total));
     NIAH.world.setCartFill(0);
-    NIAH.world.setNeedleGlow(state.gear.sense >= 3 ? NIAH.world.piles[lv.needlePile] : null);
+    NIAH.world.hideNeedle();
+    if (lv.needle.revealed) NIAH.world.showNeedle(lv.needle.pile, lv.needle.ox, lv.needle.oz);
     NIAH.helpers.sync(state.gear.hands);
     NIAH.helpers.reset();
     NIAH.player.applyLook(state.look, state.shovel);
@@ -248,6 +266,37 @@ NIAH.game = (function () {
     lv.loadTotal += amount;
   }
 
+  /* Enough hay off the top and the needle is lying there in what is left. */
+  function checkReveal(pileIndex) {
+    const lv = state.lv;
+    const n = lv.needle;
+    if (!n || n.revealed || pileIndex !== n.pile) return;
+    const data = lv.piles[pileIndex];
+    const dugFraction = 1 - data.hay / data.total;
+    if (dugFraction < n.depth) return;
+    n.revealed = true;
+    NIAH.world.showNeedle(n.pile, n.ox, n.oz);
+    NIAH.audio.ping();
+    NIAH.audio.coin();
+    NIAH.ui.setSense('✨ Something glinted in pile ' + data.name);
+    save();
+  }
+
+  function needleInReach() {
+    const lv = state.lv;
+    if (!lv || !lv.needle.revealed) return false;
+    const pos = NIAH.world.needlePosition();
+    if (!pos) return false;
+    const p = NIAH.player.position;
+    return Math.hypot(p.x - pos.x, p.z - pos.z) < 3.6;
+  }
+
+  function grabNeedle() {
+    if (!needleInReach()) return false;
+    winLevel();
+    return true;
+  }
+
   function dig(dt, pileIndex) {
     const lv = state.lv;
     const data = lv.piles[pileIndex];
@@ -257,6 +306,7 @@ NIAH.game = (function () {
     data.hay -= amount;
     addLoad(pileIndex, amount);
     NIAH.world.setPileVisual(NIAH.world.piles[pileIndex], data.hay / data.total);
+    checkReveal(pileIndex);
     NIAH.player.setLoadVisual(lv.loadTotal / capacity());
     NIAH.player.setAction('dig');
 
@@ -274,7 +324,6 @@ NIAH.game = (function () {
     const lv = state.lv;
     if (lv.loadTotal <= 0) { NIAH.audio.nope(); return; }
     const c = NIAH.world.cart;
-    let found = false;
     let gained = 0;
 
     for (const entry of lv.load) {
@@ -285,7 +334,6 @@ NIAH.game = (function () {
       gained += entry.amount * coinsPerHay();
       lv.sifted += entry.amount;
       state.totalHay += entry.amount;
-      if (entry.pile === lv.needlePile && data.sifted >= lv.needleDepth) found = true;
     }
 
     state.coins += Math.max(1, Math.floor(gained));
@@ -303,8 +351,7 @@ NIAH.game = (function () {
     NIAH.audio.coin();
     NIAH.ui.bumpCoins();
 
-    if (found) winLevel();
-    else save();
+    save();
   }
 
   /* ---------------------------------------------------------- hands */
@@ -319,6 +366,7 @@ NIAH.game = (function () {
       if (got <= 0) return 0;
       data.hay -= got;
       NIAH.world.setPileVisual(NIAH.world.piles[i], data.hay / data.total);
+      checkReveal(i);
       return got;
     },
     deliver(i, amount) {
@@ -332,7 +380,6 @@ NIAH.game = (function () {
       state.totalHay += amount;
       state.coins += Math.max(1, Math.floor(amount * coinsPerHay()));
       NIAH.world.sifterLoad(2);
-      if (i === lv.needlePile && data.sifted >= lv.needleDepth) winLevel(true);
     },
   };
 
@@ -348,32 +395,45 @@ NIAH.game = (function () {
     if (phase !== 'play') return;
     senseTimer -= dt;
     if (senseTimer > 0) return;
-    senseTimer = 0.25;
+    senseTimer = 0.2;
 
     const lv = state.lv;
+    const n = lv.needle;
+
+    if (n.revealed) {
+      NIAH.ui.setSense(needleInReach()
+        ? '✨ The needle — grab it!'
+        : '✨ The needle is lying in pile ' + lv.piles[n.pile].name);
+      return;
+    }
+
     const sense = state.gear.sense;
     if (!sense) { NIAH.ui.setSense(''); return; }
 
-    const mesh = NIAH.world.piles[lv.needlePile];
+    /* A reading off your own position, never a name. One reading narrows it
+       to a ring; walk somewhere else and take another and the rings cross —
+       that is the whole game the detector is for. Levels buy precision, not
+       the answer. */
+    // read to the needle's actual spot in the pile, not the pile's middle, so
+    // the precision you paid for means something
+    const mesh = NIAH.world.piles[n.pile];
     const p = NIAH.player.position;
-    const d = Math.hypot(p.x - mesh.x, p.z - mesh.z);
-    const near = nearestPile();
+    const d = Math.hypot(p.x - (mesh.x + n.ox), p.z - (mesh.z + n.oz));
 
     if (sense >= 3) {
-      NIAH.ui.setSense('📡 The needle is in pile ' + lv.piles[lv.needlePile].name);
-    } else if (sense >= 2 && near !== null) {
-      NIAH.ui.setSense(near === lv.needlePile
-        ? '📡 *SCREAMING* — it is in this pile'
-        : '📡 silent — nothing metal in pile ' + lv.piles[near].name);
+      NIAH.ui.setSense('📡 ' + d.toFixed(1) + ' m to the needle');
+    } else if (sense >= 2) {
+      const paces = Math.max(5, Math.round(d / 5) * 5);
+      NIAH.ui.setSense('📡 about ' + paces + ' m away');
     } else {
-      const label = d < 8 ? '*click-click-click* burning hot' : d < 16 ? '*click* *click* warm' : d < 28 ? 'faint ticking' : 'quiet';
-      NIAH.ui.setSense('📡 ' + label);
+      const band = d < 6 ? 'BURNING' : d < 12 ? 'hot' : d < 20 ? 'warm' : d < 32 ? 'cool' : 'stone cold';
+      NIAH.ui.setSense('📡 ' + band);
     }
   }
 
   /* ------------------------------------------------------- win / flow */
 
-  function winLevel(byHand) {
+  function winLevel() {
     if (phase === 'win') return;
     phase = 'win';
     const lv = state.lv;
@@ -381,17 +441,16 @@ NIAH.game = (function () {
     const bonus = Math.max(50, Math.floor(pileHay(state.level) * coinsPerHay() * 0.6));
     state.coins += bonus;
 
-    NIAH.world.setNeedleGlow(NIAH.world.piles[lv.needlePile]);
-    const c = NIAH.world.cart;
-    NIAH.world.hayBurst(c.x, 4, c.z, 26);
+    const pos = NIAH.world.needlePosition();
+    if (pos) NIAH.world.hayBurst(pos.x, pos.y + 1, pos.z, 26);
+    NIAH.world.hideNeedle();
     NIAH.audio.fanfare();
     NIAH.player.setAction('idle');
 
     const secs = Math.round((Date.now() - lv.startedAt) / 1000);
     NIAH.ui.showWin({
-      text: byHand
-        ? `A farmhand turned it up in pile ${lv.piles[lv.needlePile].name}. Barn ${lv.level} is done.`
-        : `It came out of the sifter — pile ${lv.piles[lv.needlePile].name}, ${NIAH.ui.fmt(lv.needleDepth)} hay deep. Barn ${lv.level} is done.`,
+      text: `You pulled it out of pile ${lv.piles[lv.needle.pile].name}, `
+        + `${Math.round(lv.needle.depth * 100)}% of the way down. Barn ${lv.level} is done.`,
       rows: [
         ['Needle bounty', '🪙 ' + NIAH.ui.fmt(bonus)],
         ['Hay sifted here', NIAH.ui.fmt(lv.sifted)],
@@ -486,9 +545,6 @@ NIAH.game = (function () {
     if (key === 'hands' && state.lv) {
       NIAH.helpers.sync(state.gear.hands);
       NIAH.helpers.setVisible(phase === 'play' || phase === 'paused');
-    }
-    if (key === 'sense' && state.gear.sense >= 3 && state.lv) {
-      NIAH.world.setNeedleGlow(NIAH.world.piles[state.lv.needlePile]);
     }
     save();
     NIAH.ui.renderShop(true);
@@ -606,7 +662,10 @@ NIAH.game = (function () {
 
     // contextual prompt + action button label
     let label = 'Dig', enabled = false, prompt = '';
-    if (atCart && lv.loadTotal > 0) {
+    if (needleInReach()) {
+      label = 'Grab'; enabled = true;
+      prompt = 'The needle! Grab it';
+    } else if (atCart && lv.loadTotal > 0) {
       label = 'Sift'; enabled = true;
       prompt = 'Tip ' + NIAH.ui.fmt(lv.loadTotal) + ' hay onto the belt';
     } else if (pileIndex !== null) {
@@ -639,17 +698,23 @@ NIAH.game = (function () {
   }
 
   function frame(now) {
+    // Keep the loop alive whatever happens in a frame: this used to sit after
+    // update(), so a single thrown error stopped the game for good.
+    requestAnimationFrame(frame);
     const dt = Math.min((now - lastTime) / 1000, 0.08);
     lastTime = now;
     elapsed += dt;
-    update(dt);
-    if (phase === 'wardrobe') {
-      NIAH.wardrobe.render();
-    } else {
-      NIAH.world.update(dt, elapsed);
-      NIAH.world.render();
+    try {
+      update(dt);
+      if (phase === 'wardrobe') {
+        NIAH.wardrobe.render();
+      } else {
+        NIAH.world.update(dt, elapsed);
+        NIAH.world.render();
+      }
+    } catch (err) {
+      if (!frame.warned) { frame.warned = true; console.error('frame error', err); }
     }
-    requestAnimationFrame(frame);
   }
 
   /* ----------------------------------------------------------- input */
@@ -670,6 +735,7 @@ NIAH.game = (function () {
     held = true;
     if (phase === 'intro') { skipIntro(); return; }
     if (phase !== 'play') return;
+    if (grabNeedle()) return;
     if (nearCart() && state.lv.loadTotal > 0) dump();
   }
   function actionRelease() {
