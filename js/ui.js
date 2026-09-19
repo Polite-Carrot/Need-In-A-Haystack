@@ -250,7 +250,8 @@ NIAH.ui = (function () {
   const CAT_BLURB = {
     colour: 'Plain shirt and trousers, in every colour the farm stocks.',
     flag: 'Fly one on your back.',
-    other: 'Camo, check, hi-vis and the loud ones.',
+    camo: 'Blend into anything except a haystack.',
+    other: 'Check, hi-vis, cow print and the loud ones.',
   };
   const KIND_BLURB = {
     outfit: 'Shirt and trousers, sorted by the kind of statement you want.',

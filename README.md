@@ -55,12 +55,15 @@ network calls, no dependencies to install.
   and farmhands — hired hands who actually walk the barn, each picking a pile,
   digging a load, carrying it to the conveyor and heading back for more.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
-  29 outfits shelved under Colours, Flags (thirteen, named for the countries
-  they belong to) and Other (camo, hi-vis, check, one very loud pink); 13 hats
-  (caps, cowboy, top hat, viking helm, a bunny head, a traffic cone, a crown,
-  and the Polite Carrot mascot worn as a full head); 10 facial expressions from
-  Big Grin to Shades; and 9 shovel skins (gold, trident, giant spoon, candy
-  cane, diamond). The preview turns by itself and can be dragged round by hand.
+  55 outfits shelved under Colours, Flags (26 of them, named for the countries
+  they belong to), Camo (woodland through digital, tiger stripe and one very
+  loud pink) and Other (check, hi-vis, cow print, pinstripe, disco); 20 hats
+  (caps, cowboy, sombrero, tricorn, wizard, hard hat, a bunny head, a pumpkin
+  head, a traffic cone, a crown, and the Polite Carrot mascot worn as a full
+  head); 15 facial expressions from Big Grin through Eyepatch and Monocle to a
+  Full Beard; and 14 shovel skins (gold, trident, frying pan, umbrella, bone
+  spade, candy cane, neon, diamond). The preview turns by itself and can be
+  dragged round by hand.
   Cosmetic only — every dig stat still comes from the shop. Patterns are drawn procedurally at
   runtime, so there are still no image assets in the repo.
 - Main menu, pause menu, first-person / follow camera toggle, synthesised sound
