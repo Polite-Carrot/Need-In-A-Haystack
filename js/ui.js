@@ -19,7 +19,7 @@ NIAH.ui = (function () {
   function init() {
     [
       'menu', 'intro', 'hud', 'shop', 'pause', 'howto', 'stats', 'win', 'wardrobe',
-      'wardrobeGrid', 'wardrobeCoins', 'wardrobeFoot', 'outfitCats',
+      'wardrobeGrid', 'wardrobeCoins', 'wardrobeFoot', 'outfitCats', 'toast',
       'coinBox', 'coinCount', 'hudLevel', 'senseLine', 'pileCard', 'pileName', 'pileSearched',
       'pileFill', 'shovelName', 'loadText', 'loadFill', 'prompt', 'shopBody', 'shopCoins',
       'shopDot', 'stick', 'stickKnob', 'actionBtn', 'introNumber', 'introSub', 'statsList',
@@ -123,6 +123,15 @@ NIAH.ui = (function () {
     const pct = pile.total ? ((pile.total - pile.hay) / pile.total) * 100 : 0;
     E.pileSearched.textContent = Math.floor(pct) + '% dug out';
     E.pileFill.style.width = pct.toFixed(1) + '%';
+  }
+
+  let toastTimer = null;
+  function toast(text) {
+    if (!E.toast) return;
+    E.toast.textContent = text;
+    E.toast.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => E.toast.classList.remove('on'), 2600);
   }
 
   function setPrompt(text) {
@@ -371,6 +380,7 @@ NIAH.ui = (function () {
       ['Needles found', s.needles],
       ['Current barn', '#' + s.level],
       ['Hay sifted (all time)', fmt(s.totalHay)],
+      ['Odds and ends found', fmt(s.junkFound || 0)],
       ['Loads carried', fmt(s.totalLoads)],
       ['Coins', fmt(s.coins)],
       ['Shovel', NIAH.data.SHOVELS[s.shovel].name],
@@ -390,7 +400,7 @@ NIAH.ui = (function () {
 
   return {
     init, screen, hudOn, setHud, setPileCard, setPrompt, setAction, setSense, setIntro,
-    setMenu, setCameraLabel, renderShop, openShop, closeShop, shopIsOpen, showStats, showWin,
+    setMenu, setCameraLabel, renderShop, openShop, closeShop, shopIsOpen, showStats, showWin, toast,
     renderWardrobe, syncOutfitCat,
     bumpCoins, fmt,
     get stick() { return E.stick; },

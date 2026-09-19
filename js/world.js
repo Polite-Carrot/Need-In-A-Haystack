@@ -190,6 +190,7 @@ NIAH.world = (function () {
       if (o.material && o.isSprite) o.material.dispose();
     });
     levelGroup = null;
+    junk.length = 0;
     state.piles = [];
     state.doors = [];
     state.needle = null;
@@ -489,7 +490,179 @@ NIAH.world = (function () {
     return pile;
   }
 
+
+  /* ------------------------------------------------------------ junk */
+
+  /* Odds and ends buried in the hay. They pop out of the pile when you dig
+     past them, tumble to the floor and sit there until somebody walks over. */
+  const junk = [];
+  const JUNK_MAT = {
+    rust:  new T.MeshLambertMaterial({ color: 0x8a5a3a, flatShading: true }),
+    iron:  new T.MeshLambertMaterial({ color: 0x6e7479, flatShading: true }),
+    tin:   new T.MeshLambertMaterial({ color: 0xa9b3ba, flatShading: true }),
+    paper: new T.MeshLambertMaterial({ color: 0xc8503f }),
+    gold:  new T.MeshLambertMaterial({ color: 0xffcf4d, flatShading: true }),
+    glass: new T.MeshLambertMaterial({ color: 0xdfe9f0, flatShading: true }),
+    leather: new T.MeshLambertMaterial({ color: 0x5b3a1e, flatShading: true }),
+    sole:  new T.MeshLambertMaterial({ color: 0x33261a }),
+  };
+
+  const JUNK_SHAPES = {
+    can: () => {
+      const g = new T.Group();
+      const body = new T.Mesh(new T.CylinderGeometry(0.16, 0.16, 0.42, 10), JUNK_MAT.tin);
+      const band = new T.Mesh(new T.CylinderGeometry(0.165, 0.165, 0.18, 10), JUNK_MAT.paper);
+      g.add(body, band);
+      g.rotation.z = Math.PI / 2;
+      return g;
+    },
+    boot: () => {
+      const g = new T.Group();
+      const upper = new T.Mesh(new T.BoxGeometry(0.22, 0.34, 0.24), JUNK_MAT.leather);
+      upper.position.y = 0.18;
+      const toe = new T.Mesh(new T.BoxGeometry(0.22, 0.16, 0.42), JUNK_MAT.leather);
+      toe.position.set(0, 0.08, 0.14);
+      const sole = new T.Mesh(new T.BoxGeometry(0.25, 0.07, 0.48), JUNK_MAT.sole);
+      sole.position.set(0, 0.02, 0.12);
+      g.add(upper, toe, sole);
+      return g;
+    },
+    key: () => {
+      const g = new T.Group();
+      const ring = new T.Mesh(new T.TorusGeometry(0.11, 0.032, 6, 12), JUNK_MAT.rust);
+      const shaft = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 0.38, 6), JUNK_MAT.rust);
+      shaft.position.y = -0.24;
+      const tooth = new T.Mesh(new T.BoxGeometry(0.09, 0.05, 0.03), JUNK_MAT.rust);
+      tooth.position.set(0.05, -0.38, 0);
+      g.add(ring, shaft, tooth);
+      g.rotation.x = Math.PI / 2;
+      return g;
+    },
+    shoe: () => {
+      const g = new T.Group();
+      const u = new T.Mesh(new T.TorusGeometry(0.2, 0.045, 6, 12, Math.PI * 1.35), JUNK_MAT.iron);
+      u.rotation.x = Math.PI / 2;
+      u.rotation.z = -Math.PI * 0.18;
+      g.add(u);
+      return g;
+    },
+    watch: () => {
+      const g = new T.Group();
+      const body = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.05, 12), JUNK_MAT.gold);
+      body.rotation.x = Math.PI / 2;
+      const face = new T.Mesh(new T.CylinderGeometry(0.11, 0.11, 0.06, 12), JUNK_MAT.glass);
+      face.rotation.x = Math.PI / 2;
+      face.position.z = 0.01;
+      for (let i = 0; i < 4; i++) {
+        const link = new T.Mesh(new T.TorusGeometry(0.035, 0.012, 5, 8), JUNK_MAT.gold);
+        link.position.set(0.02 + i * 0.06, 0.16 + i * 0.03, 0);
+        link.rotation.y = Math.PI / 2;
+        g.add(link);
+      }
+      g.add(body, face);
+      return g;
+    },
+    ring: () => {
+      const g = new T.Group();
+      const band = new T.Mesh(new T.TorusGeometry(0.09, 0.022, 6, 14), JUNK_MAT.gold);
+      const stone = new T.Mesh(new T.OctahedronGeometry(0.04), JUNK_MAT.glass);
+      stone.position.y = 0.1;
+      g.add(band, stone);
+      g.rotation.x = Math.PI / 2.4;
+      return g;
+    },
+  };
+
+  function popJunk(id, shape, x, y, z, pileIndex) {
+    if (!levelGroup) return;
+    const build = JUNK_SHAPES[shape] || JUNK_SHAPES.can;
+    const mesh = build();
+    mesh.position.set(x, Math.max(0.4, y), z);
+    levelGroup.add(mesh);
+
+    // throw it away from the middle of the pile, so it lands somewhere you
+    // can actually walk to rather than inside the hay
+    const pile = state.piles[pileIndex];
+    let ax = Math.random() - 0.5, az = Math.random() - 0.5;
+    if (pile) { ax = x - pile.x; az = z - pile.z; }
+    const len = Math.hypot(ax, az) || 1;
+    junk.push({
+      id, mesh,
+      vx: (ax / len) * 3.2 + (Math.random() - 0.5) * 1.2,
+      vy: 3.4 + Math.random() * 1.6,
+      vz: (az / len) * 3.2 + (Math.random() - 0.5) * 1.2,
+      vr: (Math.random() - 0.5) * 6,
+      resting: false,
+      spin: Math.random() * 6,
+      pileIndex,
+    });
+  }
+
+  function junkPieces() { return junk; }
+
+  function clearJunkMesh(id) {
+    const i = junk.findIndex((j) => j.id === id);
+    if (i < 0) return null;
+    const j = junk[i];
+    const pos = j.mesh.position.clone();
+    levelGroup.remove(j.mesh);
+    j.mesh.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    junk.splice(i, 1);
+    return pos;
+  }
+
+  function clearAllJunk() {
+    junk.slice().forEach((j) => clearJunkMesh(j.id));
+    junk.length = 0;
+  }
+
+  function updateJunk(dt, time) {
+    for (const j of junk) {
+      if (!j.resting) {
+        j.vy -= 15 * dt;
+        j.mesh.position.x += j.vx * dt;
+        j.mesh.position.y += j.vy * dt;
+        j.mesh.position.z += j.vz * dt;
+        j.mesh.rotation.x += j.vr * dt;
+        j.mesh.rotation.z += j.vr * 0.6 * dt;
+        if (j.mesh.position.y <= 0.14) {
+          j.mesh.position.y = 0.14;
+          j.resting = true;
+          j.mesh.rotation.set(0, Math.random() * 6, 0);
+          // if it settled inside the pile it came out of, roll it clear so it
+          // can be walked over
+          const pile = state.piles[j.pileIndex];
+          if (pile && pile.group.visible) {
+            const dx = j.mesh.position.x - pile.x, dz = j.mesh.position.z - pile.z;
+            const d = Math.hypot(dx, dz) || 1;
+            const clear = 1.3 + 1.9 * pile.cone.scale.x + 0.9;
+            if (d < clear) {
+              j.mesh.position.x = pile.x + (dx / d) * clear;
+              j.mesh.position.z = pile.z + (dz / d) * clear;
+            }
+          }
+        }
+      } else {
+        // a slow turn and a bob, so it reads as something to pick up
+        j.mesh.rotation.y += dt * 1.1;
+        j.mesh.position.y = 0.16 + Math.sin(time * 2.4 + j.spin) * 0.045;
+      }
+    }
+  }
+
   /* -------------------------------------------------------- updates */
+
+  /* How high the hay sits at a given distance from a pile's middle — used to
+     lay the needle and any junk on the surface rather than inside the mesh. */
+  function pileSurfaceAt(pileIndex, radial) {
+    const pile = state.piles[pileIndex];
+    if (!pile || !pile.group.visible) return 0.15;
+    const par = pile.cone.geometry.parameters;
+    const sc = pile.cone.scale.x;
+    const h = pile.cone.userData.h * pile.cone.scale.y;
+    const t = (par.radiusBottom * sc - radial) / Math.max(0.001, (par.radiusBottom - par.radiusTop) * sc);
+    return Math.max(0.15, h * Math.max(0, Math.min(1, t)));
+  }
 
   function setPileVisual(pile, remaining) {
     const s = 0.2 + 0.8 * Math.max(0, Math.min(1, remaining));
@@ -648,6 +821,7 @@ NIAH.world = (function () {
       d.pivot.rotation.y = -d.sign * state.doorOpen * 1.9;
     }
     updateSifter(dt);
+    updateJunk(dt, time);
 
     // dust drift
     if (dust) {
@@ -699,6 +873,7 @@ NIAH.world = (function () {
     init, resize, render, renderTo, update,
     buildLevel, layoutFor,
     setPileVisual, setCartFill, showNeedle, hideNeedle, needlePosition, setDoorOpen, hayBurst, sifterLoad,
+    popJunk, junkPieces, clearJunkMesh, clearAllJunk, pileSurfaceAt,
     get scene() { return scene; },
     get camera() { return camera; },
     get piles() { return state.piles; },

@@ -41,11 +41,16 @@ network calls, no dependencies to install.
   at. The needle is a real object: uncover it and it lies there in the hay
   until you pick it up — your hired hands can dig it out for you, but only you
   can take it.
-- **Needle Sense** — a detector that reads how far off the needle is *from where
-  you stand*, and never names the pile. One reading narrows it to a ring around
-  you; walk somewhere else, take another, and the rings cross. Levels buy
-  precision — warm/hot/burning, then metres to the nearest five, then metres —
-  not the answer.
+- **Needle Sense** — a detector that reads how far off the nearest *metal* is
+  *from where you stand*, and never names the pile. One reading narrows it to a
+  ring around you; walk somewhere else, take another, and the rings cross.
+  Levels buy precision — warm/hot/burning, then metres to the nearest five,
+  then metres — not the answer.
+- **Odds and ends in the hay.** Horseshoes, a rusty key, a tin can, an old
+  boot, a pocket watch, a wedding ring — buried at their own depths, worth
+  coins, and dug out the same way the needle is. The metal ones are what the
+  detector actually hears, so a promising reading can turn out to be a
+  horseshoe; digging the scrap out is how you clear the noise.
 - **8 shovels and 4 pieces of gear**: work boots, sifting screen, the detector,
   and farmhands — hired hands who actually walk the barn, each picking a pile,
   digging a load, carrying it to the conveyor and heading back for more.

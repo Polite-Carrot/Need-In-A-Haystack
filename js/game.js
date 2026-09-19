@@ -29,6 +29,24 @@ NIAH.data = {
   },
 };
 
+/* Odds and ends buried in the piles. `value` is in hay-equivalents, so a find
+   is worth the same relative to the barn you are in. Metal pieces are what the
+   detector actually hears — which is the point of them. */
+NIAH.data.JUNK = [
+  { id: 'can',   name: 'Tin Can',      emoji: '🥫', shape: 'can',   metal: true,  value: 10,  weight: 24,
+    line: 'Somebody had lunch in here.' },
+  { id: 'boot',  name: 'Old Boot',     emoji: '🥾', shape: 'boot',  metal: false, value: 18,  weight: 18,
+    line: 'Just the one, of course.' },
+  { id: 'key',   name: 'Rusty Key',    emoji: '🗝️', shape: 'key',   metal: true,  value: 35,  weight: 20,
+    line: 'Fits nothing on this farm.' },
+  { id: 'shoe',  name: 'Horseshoe',    emoji: '🧲', shape: 'shoe',  metal: true,  value: 80,  weight: 20,
+    line: 'Lucky. Less so for the horse.' },
+  { id: 'watch', name: 'Pocket Watch', emoji: '⌚', shape: 'watch', metal: true,  value: 240, weight: 12,
+    line: 'Stopped at ten past four.' },
+  { id: 'ring',  name: 'Wedding Ring', emoji: '💍', shape: 'ring',  metal: true,  value: 600, weight: 6,
+    line: 'Someone has been looking for this.' },
+];
+
 NIAH.game = (function () {
   const D = NIAH.data;
   const SAVE_KEY = 'niah.save.v2';
@@ -126,12 +144,44 @@ NIAH.game = (function () {
 
   /* --------------------------------------------------- level set-up */
 
+  function rollJunkType() {
+    const table = NIAH.data.JUNK;
+    const total = table.reduce((a, j) => a + j.weight, 0);
+    let roll = Math.random() * total;
+    for (const j of table) { roll -= j.weight; if (roll <= 0) return j.id; }
+    return table[0].id;
+  }
+
+  function makeJunk(count) {
+    const out = [];
+    let id = 0;
+    for (let pile = 0; pile < count; pile++) {
+      // most piles hide one thing, some two, some nothing at all
+      const n = Math.random() < 0.18 ? 0 : Math.random() < 0.75 ? 1 : 2;
+      for (let k = 0; k < n; k++) {
+        out.push({
+          id: id++,
+          type: rollJunkType(),
+          pile,
+          depth: 0.12 + Math.random() * 0.8,
+          ox: (Math.random() - 0.5) * 3.6,
+          oz: (Math.random() - 0.5) * 3.6,
+          out: false,        // dug up and lying on the floor
+          taken: false,
+        });
+      }
+    }
+    return out;
+  }
+
   function makeLevel(level) {
     const count = pileCount(level);
     const hay = pileHay(level);
     const piles = [];
     for (let i = 0; i < count; i++) piles.push({ name: LETTERS[i], total: hay, hay: hay, sifted: 0 });
     return {
+      junk: makeJunk(count),
+      junkFound: 0,
       level,
       piles,
       // the needle has a place inside its pile: how far down, and whereabouts
@@ -157,6 +207,9 @@ NIAH.game = (function () {
     NIAH.world.setCartFill(0);
     NIAH.world.hideNeedle();
     if (lv.needle.revealed) NIAH.world.showNeedle(lv.needle.pile, lv.needle.ox, lv.needle.oz);
+    NIAH.world.clearAllJunk();
+    if (!lv.junk) { lv.junk = makeJunk(lv.piles.length); lv.junkFound = lv.junkFound || 0; }
+    lv.junk.forEach((j) => { if (j.out && !j.taken) dropJunk(j, true); });
     NIAH.helpers.sync(state.gear.hands);
     NIAH.helpers.reset();
     NIAH.player.applyLook(state.look, state.shovel);
@@ -282,6 +335,59 @@ NIAH.game = (function () {
     save();
   }
 
+  function junkType(j) { return NIAH.cosmetics.byId(NIAH.data.JUNK, j.type); }
+
+  function dropJunk(j, silent) {
+    const mesh = NIAH.world.piles[j.pile];
+    const radial = Math.hypot(j.ox, j.oz);
+    const y = NIAH.world.pileSurfaceAt(j.pile, radial);
+    NIAH.world.popJunk(j.id, junkType(j).shape, mesh.x + j.ox, y, mesh.z + j.oz, j.pile);
+    if (!silent) NIAH.audio.ping();
+  }
+
+  function checkJunk(pileIndex) {
+    const lv = state.lv;
+    if (!lv.junk) return;
+    const data = lv.piles[pileIndex];
+    const dug = 1 - data.hay / data.total;
+    lv.junk.forEach((j) => {
+      if (j.out || j.taken || j.pile !== pileIndex || dug < j.depth) return;
+      const before = nearestMetal();          // with this piece still buried
+      j.out = true;
+      const after = nearestMetal();           // without it
+      dropJunk(j);
+      const t = junkType(j);
+      // if pulling it out made the reading jump, it was what the detector heard
+      const wasLoudest = state.gear.sense > 0 && t.metal && before !== null &&
+        (after === null || after > before + 0.5);
+      NIAH.ui.toast(t.emoji + ' ' + t.name + (wasLoudest ? ' — so that is what the detector heard' : ''));
+    });
+  }
+
+  function collectJunk() {
+    const lv = state.lv;
+    if (!lv.junk) return;
+    const p = NIAH.player.position;
+    NIAH.world.junkPieces().slice().forEach((piece) => {
+      const j = lv.junk.find((x) => x.id === piece.id);
+      if (!j || j.taken) return;
+      const d = Math.hypot(p.x - piece.mesh.position.x, p.z - piece.mesh.position.z);
+      if (d > 3.0) return;
+      j.taken = true;
+      const t = junkType(j);
+      const coins = Math.max(1, Math.floor(t.value * coinsPerHay()));
+      state.coins += coins;
+      state.junkFound = (state.junkFound || 0) + 1;
+      lv.junkFound = (lv.junkFound || 0) + 1;
+      const pos = NIAH.world.clearJunkMesh(j.id);
+      if (pos) NIAH.world.hayBurst(pos.x, pos.y + 0.4, pos.z, 5);
+      NIAH.audio.coin();
+      NIAH.ui.bumpCoins();
+      NIAH.ui.toast(t.emoji + ' ' + t.name + '  +' + NIAH.ui.fmt(coins) + '  ·  ' + t.line);
+      save();
+    });
+  }
+
   function needleInReach() {
     const lv = state.lv;
     if (!lv || !lv.needle.revealed) return false;
@@ -307,6 +413,7 @@ NIAH.game = (function () {
     addLoad(pileIndex, amount);
     NIAH.world.setPileVisual(NIAH.world.piles[pileIndex], data.hay / data.total);
     checkReveal(pileIndex);
+    checkJunk(pileIndex);
     NIAH.player.setLoadVisual(lv.loadTotal / capacity());
     NIAH.player.setAction('dig');
 
@@ -367,6 +474,7 @@ NIAH.game = (function () {
       data.hay -= got;
       NIAH.world.setPileVisual(NIAH.world.piles[i], data.hay / data.total);
       checkReveal(i);
+      checkJunk(i);
       return got;
     },
     deliver(i, amount) {
@@ -391,6 +499,27 @@ NIAH.game = (function () {
 
   /* ----------------------------------------------------------- sense */
 
+  /* Distance to the closest buried metal: the needle, or any metal scrap
+     still in a pile. Null once there is nothing left to hear. */
+  function nearestMetal() {
+    const lv = state.lv;
+    const p = NIAH.player.position;
+    let best = null;
+    if (!lv.needle.revealed) {
+      const m = NIAH.world.piles[lv.needle.pile];
+      best = Math.hypot(p.x - (m.x + lv.needle.ox), p.z - (m.z + lv.needle.oz));
+    }
+    (lv.junk || []).forEach((j) => {
+      if (j.out || j.taken) return;
+      const t = NIAH.cosmetics.byId(NIAH.data.JUNK, j.type);
+      if (!t.metal) return;
+      const m = NIAH.world.piles[j.pile];
+      const d = Math.hypot(p.x - (m.x + j.ox), p.z - (m.z + j.oz));
+      if (best === null || d < best) best = d;
+    });
+    return best;
+  }
+
   function updateSense(dt) {
     if (phase !== 'play') return;
     senseTimer -= dt;
@@ -411,17 +540,15 @@ NIAH.game = (function () {
     if (!sense) { NIAH.ui.setSense(''); return; }
 
     /* A reading off your own position, never a name. One reading narrows it
-       to a ring; walk somewhere else and take another and the rings cross —
-       that is the whole game the detector is for. Levels buy precision, not
-       the answer. */
-    // read to the needle's actual spot in the pile, not the pile's middle, so
-    // the precision you paid for means something
-    const mesh = NIAH.world.piles[n.pile];
-    const p = NIAH.player.position;
-    const d = Math.hypot(p.x - (mesh.x + n.ox), p.z - (mesh.z + n.oz));
+       to a ring; walk somewhere else and take another and the rings cross.
+       It hears the nearest *metal*, though, and there is scrap buried out
+       there too — so a reading can turn out to be a horseshoe. Digging the
+       scrap out is how you clear the noise. */
+    const d = nearestMetal();
+    if (d === null) { NIAH.ui.setSense('📡 nothing metal left in range'); return; }
 
     if (sense >= 3) {
-      NIAH.ui.setSense('📡 ' + d.toFixed(1) + ' m to the needle');
+      NIAH.ui.setSense('📡 ' + d.toFixed(1) + ' m to the nearest metal');
     } else if (sense >= 2) {
       const paces = Math.max(5, Math.round(d / 5) * 5);
       NIAH.ui.setSense('📡 about ' + paces + ' m away');
@@ -455,6 +582,7 @@ NIAH.game = (function () {
         ['Needle bounty', '🪙 ' + NIAH.ui.fmt(bonus)],
         ['Hay sifted here', NIAH.ui.fmt(lv.sifted)],
         ['Piles opened', lv.opened + ' of ' + lv.piles.length],
+        ['Odds and ends', (lv.junkFound || 0) + ' dug up'],
         ['Time in the barn', secs < 60 ? secs + 's' : Math.floor(secs / 60) + 'm ' + (secs % 60) + 's'],
         ['Next barn pays', '×1.85 coins'],
       ],
@@ -658,6 +786,7 @@ NIAH.game = (function () {
     NIAH.player.updateCamera(NIAH.world.camera, dt, state.camera, false, NIAH.world.bounds);
 
     farmhands(dt);
+    collectJunk();
     updateSense(dt);
 
     // contextual prompt + action button label
