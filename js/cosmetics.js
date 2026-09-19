@@ -343,6 +343,22 @@ NIAH.cosmetics = (function () {
         g.fillRect(x * 8, y * 8, 8, 8);
       }
     }),
+    rosette: () => canvasTex('rosette', 96, 96, (g, w, h) => {
+      g.fillStyle = '#6d1224'; g.fillRect(0, 0, w, h);
+      // show rosettes, pinned in rows
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+        const x = 16 + c * 32 + (r % 2) * 8, y = 16 + r * 32;
+        g.fillStyle = '#f3d477';
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2;
+          g.beginPath(); g.ellipse(x + Math.cos(a) * 7, y + Math.sin(a) * 7, 4.5, 3, a, 0, 7); g.fill();
+        }
+        g.fillStyle = '#c8102e';
+        g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill();
+        g.fillStyle = '#f3d477';
+        g.fillRect(x - 4, y + 7, 3, 10); g.fillRect(x + 1, y + 7, 3, 10);
+      }
+    }),
     hay: () => canvasTex('hayPrint', 64, 64, (g, w, h) => {
       g.fillStyle = '#e8c463'; g.fillRect(0, 0, w, h);
       g.strokeStyle = '#b98f2c'; g.lineWidth = 1.5;
@@ -483,6 +499,9 @@ NIAH.cosmetics = (function () {
       shirt: { tex: 'racing' }, trousers: { color: 0x1e2a4a }, swatch: ['#c8322f', '#1e2a4a'] },
     { id: 'disco', name: 'Disco Sequins', cat: 'other', price: 150000, unlock: 6, desc: 'The barn becomes a dancefloor.',
       shirt: { tex: 'disco' }, trousers: { tex: 'disco' }, swatch: ['#ff5ea8', '#5ed4ff'] },
+    { id: 'rosettes', name: 'Rosette Claret', cat: 'other', price: 0, need: 1,
+      desc: 'Every rosette you have ever won, worn at once.',
+      shirt: { tex: 'rosette' }, trousers: { color: 0x3a0a14 }, swatch: ['#6d1224', '#f3d477'] },
   ];
 
   /* ----------------------------------------------------------- hats */
@@ -807,6 +826,34 @@ NIAH.cosmetics = (function () {
           tooth.position.set(-0.1 + i * 0.07, -0.14 + (i % 2) * 0.03, 0.4);
           g.add(tooth);
         }
+        return g;
+      } },
+    { id: 'tincan', name: 'Tin Can Hat', price: 0, need: 'shelf', swatch: ['#b9c2c9', '#c0392b'],
+      desc: 'The first thing you ever dug out, worn with pride.',
+      build: () => {
+        const g = new T.Group();
+        g.position.y = 0.12;               // perched on the crown, not pulled down over the eyes
+        g.rotation.z = 0.11;               // and at a jaunty angle, because it is a tin can
+        const tin = M(0xb9c2c9, true);
+        const body = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.44, 14, 1, true), tin);
+        body.position.y = 0.2;
+        body.material.side = T.DoubleSide;
+        const base = new T.Mesh(new T.CylinderGeometry(0.32, 0.32, 0.04, 14), tin);
+        base.position.y = 0.42;
+        const rimA = new T.Mesh(new T.TorusGeometry(0.32, 0.028, 6, 16), tin);
+        rimA.position.y = 0.4; rimA.rotation.x = Math.PI / 2;
+        const rimB = rimA.clone(); rimB.position.y = 0;
+        const label = new T.Mesh(new T.CylinderGeometry(0.332, 0.332, 0.26, 14, 1, true), M(0xc0392b));
+        label.material.side = T.DoubleSide;
+        label.position.y = 0.2;
+        const band = new T.Mesh(new T.CylinderGeometry(0.336, 0.336, 0.05, 14, 1, true), M(0xf3e6c8));
+        band.material.side = T.DoubleSide;
+        band.position.y = 0.25;
+        // the lid, levered off and bent up on one side of the rim
+        const lid = new T.Mesh(new T.CylinderGeometry(0.28, 0.28, 0.02, 14), M(0xd7dee3, true));
+        lid.position.set(-0.3, 0.52, 0.02);
+        lid.rotation.set(0.1, 0, 1.35);
+        g.add(body, base, rimA, rimB, label, band, lid);
         return g;
       } },
     { id: 'crown', name: 'Golden Crown', price: 250000, unlock: 8, swatch: ['#ffcf4d', '#ff4d6d'], desc: 'King of the haystack.',
@@ -1273,6 +1320,33 @@ NIAH.cosmetics = (function () {
         blade.scale.set(0.8, 1.1, 0.5);
         const load = hayLoad(-2.1, 0.5);
         g.add(handle, blade, load);
+        return { group: g, blade, load };
+      } },
+    { id: 'heirloom', name: 'Heirloom Spade', price: 0, need: 3, swatch: ['#8a6a3a', '#d8a944'],
+      desc: 'Three farms handed on, and this came back every time.',
+      build: () => {
+        const g = new T.Group();
+        const worn = M(0x8a6a3a);
+        const handle = new T.Mesh(new T.CylinderGeometry(0.062, 0.055, 1.9, 8), worn);
+        handle.position.y = -0.95;
+        // brass collars where three owners each re-bound the shaft
+        [-0.42, -1.02, -1.6].forEach((y) => {
+          const collar = new T.Mesh(new T.TorusGeometry(0.075, 0.022, 6, 14), M(0xd8a944, true));
+          collar.position.y = y;
+          collar.rotation.x = Math.PI / 2;
+          g.add(collar);
+        });
+        const grip = new T.Mesh(new T.TorusGeometry(0.14, 0.045, 6, 14), worn);
+        grip.position.y = 0.04;
+        const blade = new T.Mesh(new T.BoxGeometry(0.62, 0.72, 0.09), M(0x8f9aa2, true));
+        blade.position.y = -1.96;
+        const edge = new T.Mesh(new T.BoxGeometry(0.62, 0.1, 0.12), M(0xeef4f7, true));
+        edge.position.y = -2.32;
+        // a brass name plate, re-stamped by each owner
+        const plate = new T.Mesh(new T.BoxGeometry(0.34, 0.12, 0.02), M(0xd8a944, true));
+        plate.position.set(0, -1.82, 0.055);
+        const load = hayLoad(-2.08);
+        g.add(handle, grip, blade, edge, plate, load);
         return { group: g, blade, load };
       } },
   ];

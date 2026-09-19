@@ -55,17 +55,35 @@ network calls, no dependencies to install.
   and farmhands — hired hands who actually walk the barn, each picking a pile,
   digging a load, carrying it to the conveyor and heading back for more.
 - **My Farmer** — a wardrobe you spend barn coins in, with a turntable preview:
-  55 outfits shelved under Colours, Flags (26 of them, named for the countries
+  56 outfits shelved under Colours, Flags (26 of them, named for the countries
   they belong to), Camo (woodland through digital, tiger stripe and one very
-  loud pink) and Other (check, hi-vis, cow print, pinstripe, disco); 20 hats
+  loud pink) and Other (check, hi-vis, cow print, pinstripe, disco); 21 hats
   (caps, cowboy, sombrero, tricorn, wizard, hard hat, a bunny head, a pumpkin
   head, a traffic cone, a crown, and the Polite Carrot mascot worn as a full
   head); 15 facial expressions from Big Grin through Eyepatch and Monocle to a
-  Full Beard; and 14 shovel skins (gold, trident, frying pan, umbrella, bone
+  Full Beard; and 15 shovel skins (gold, trident, frying pan, umbrella, bone
   spade, candy cane, neon, diamond). The preview turns by itself and can be
   dragged round by hand.
+  Three pieces are not for sale at any price — Rosette Claret, the Tin Can Hat
+  and the Heirloom Spade are earned by retiring and by filling the Barn Shelf.
   Cosmetic only — every dig stat still comes from the shop. Patterns are drawn procedurally at
   runtime, so there are still no image assets in the repo.
+- **The Barn Shelf.** Every kind of odd and end you dig out gets a slot of its
+  own, with a running count and the barn the first one came out of. Fill all six
+  and there is a one-off bounty and the **Tin Can Hat**.
+- **Retire the farm.** From barn 8 you can hand the farm on: the coins, shovels
+  and gear all go and you start again at barn 1, but you keep a **rosette** for
+  every needle you found. Each rosette is **+10% coins and +5% digging** for
+  good, and every eight of them brings every shovel's unlock forward by a barn —
+  so each run is faster and reaches further than the last. Your farmer, your
+  wardrobe and the Barn Shelf come with you, and retiring three times unlocks
+  the **Heirloom Spade**.
+- **Farmhands work while you're away.** Come back and the crew have been baling
+  in the yard — a welcome-back card on the menu, worth 8% of your current barn
+  per hand per hour, capped at one barn and at four hours. They never touch your
+  piles, so the barn is exactly where you left it.
+- **Installable.** A web app manifest, icons and a service worker that precaches
+  the whole game, so it can be added to a home screen and played with no signal.
 - Main menu, pause menu, first-person / follow camera toggle, synthesised sound
   effects (no audio files), and autosave to `localStorage`.
 - The shared **Polite Carrot boot lockup** on startup, ported from Color Match &
@@ -78,6 +96,13 @@ Each barn has more piles and bigger piles than the last (`×1.5` hay), and pays
 `×1.85` per hay. Shovels are gated behind barn levels as well as price, so
 clearing barns — not grinding one — is what opens the next tier.
 
+That curve outruns its own sinks: by barn 10 a single barn pays about 6.4M
+coins while everything buyable in the game costs about 9.8M put together, and
+barn 13 pays 137M. **Retiring is the sink.** It puts the whole shop back in
+front of you, and rosettes pay out in the two things a fresh run is actually
+short of — dig rate and early shovels — rather than in coins alone, which the
+barn gates would have swallowed.
+
 ## Running it
 
 Open `index.html` in a browser, or serve the folder:
@@ -87,7 +112,12 @@ npx serve .     # or: python3 -m http.server
 ```
 
 Progress is saved in `localStorage` under `niah.save.v2`; **Erase save** on the
-main menu clears it.
+main menu clears it. Older saves are migrated forward on load, so an existing
+game keeps its coins, barn and wardrobe.
+
+The service worker only registers over `http(s)`, so opening `index.html`
+straight off disk still works. When you change any file in the shell, bump
+`CACHE` in `sw.js` so returning players fetch it.
 
 ## Hosting on GitHub Pages
 
@@ -111,7 +141,9 @@ pick **`main`** and **`/ (root)`**.
 | `js/wardrobe.js` | The My Farmer preview scene and its auto-framing |
 | `js/helpers.js` | Hired farmhands: their round trip, steering and animation |
 | `js/audio.js` | WebAudio sound effects |
-| `assets/` | Polite Carrot logo and wordmark for the boot lockup |
+| `sw.js` | Service worker: precaches the shell so the game runs offline |
+| `manifest.webmanifest` | Web app manifest — name, colours, icons, display mode |
+| `assets/` | Polite Carrot logo and wordmark, plus the app icon in SVG and PNG |
 | `vendor/three.min.js` | three.js r160 (MIT, see `vendor/three.LICENSE`) |
 
 The original 2D tap version lives in this repo's git history, before the 3D rework.

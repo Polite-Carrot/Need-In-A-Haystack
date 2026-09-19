@@ -10,6 +10,12 @@
 <meta property="og:type" content="website" />
 <title>Needle in a Haystack</title>
 <link rel="stylesheet" href="css/style.css" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Haystack" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>" />
 </head>
 <body>
@@ -28,10 +34,20 @@
     <div class="menu-inner">
       <h1 class="title">Needle<span class="title-in"> in a </span>Haystack</h1>
       <p class="tagline">One barn. Several piles. One needle.</p>
+      <p class="prestige-line" id="prestigeLine" hidden></p>
+
+      <div class="away-card" id="offlineCard" hidden>
+        <div class="away-head">While you were away</div>
+        <div class="away-body" id="offlineText"></div>
+        <button class="btn small" id="btnCollectOffline">Collect 🪙 <span id="offlineCoins">0</span></button>
+      </div>
+
       <div class="menu-buttons">
         <button class="btn big" id="btnContinue" hidden>Continue — <span id="continueLabel"></span></button>
         <button class="btn big" id="btnPlay">Start digging</button>
         <button class="btn ghost" id="btnFarmerMenu">👕 My Farmer</button>
+        <button class="btn ghost" id="btnMenuShelf">🗄️ Barn Shelf</button>
+        <button class="btn ghost" id="btnMenuRetire" hidden>🏅 Retire the farm</button>
         <button class="btn ghost" id="btnHowTo">How to play</button>
         <button class="btn ghost" id="btnMenuStats">Farm record</button>
         <button class="btn ghost danger" id="btnWipe" hidden>Erase save</button>
@@ -103,6 +119,8 @@
       <button class="btn" id="btnResume">Back to the barn</button>
       <button class="btn ghost" id="btnPauseShop">Shop</button>
       <button class="btn ghost" id="btnPauseFarmer">My Farmer</button>
+      <button class="btn ghost" id="btnPauseShelf">Barn Shelf</button>
+      <button class="btn ghost" id="btnPauseRetire" hidden>🏅 Retire the farm</button>
       <button class="btn ghost" id="btnCamera">Camera: Follow</button>
       <button class="btn ghost" id="btnSound">Sound: On</button>
       <button class="btn ghost" id="btnQuit">Quit to menu</button>
@@ -120,6 +138,8 @@
         <li><b>The needle</b> is buried at some depth in <b>one</b> pile. Dig that pile down far enough and you will see it glinting in what is left — then walk over and grab it.</li>
         <li>Digging the wrong pile is never wasted — it still pays. <b>Needle Sense</b> tells you how far off the needle is from where you stand, so take a reading, walk somewhere else, take another, and close in.</li>
         <li>Spend coins on shovels and gear. Better shovels unlock as you clear barns.</li>
+        <li><b>Odds and ends</b> come out of the hay too. Every kind you dig up goes on the <b>Barn Shelf</b> — fill it and there is a bounty and a hat in it.</li>
+        <li>From <b>barn 8</b> you can <b>retire the farm</b>: you hand back the coins, the shovels and the gear and start at barn 1 again, but you keep a <b>rosette</b> for every needle you found. Each one is +10% coins and +5% digging for good, and every eight of them lets you buy the shovels a barn earlier. Your farmer and your Barn Shelf come with you.</li>
       </ul>
       <button class="btn" id="closeHowto">Got it</button>
     </div>
@@ -154,6 +174,29 @@
     </div>
   </section>
 
+  <!-- --------------------------------------------------- barn shelf -->
+  <section id="shelf" class="screen dim" aria-hidden="true">
+    <div class="card wide">
+      <h2>Barn Shelf</h2>
+      <p class="card-sub" id="shelfSub"></p>
+      <div class="shelf-grid" id="shelfGrid"></div>
+      <p class="card-foot" id="shelfFoot"></p>
+      <button class="btn" id="closeShelf">Back</button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- retire -->
+  <section id="retire" class="screen dim" aria-hidden="true">
+    <div class="card">
+      <div class="needle-art">🏅</div>
+      <h2>Retire the farm</h2>
+      <p id="retireText"></p>
+      <div class="win-stats" id="retireStats"></div>
+      <button class="btn big" id="btnDoRetire">Hand the farm on</button>
+      <button class="btn ghost" id="closeRetire">Not yet</button>
+    </div>
+  </section>
+
   <!-- ------------------------------------------------ level complete -->
   <section id="win" class="screen dim" aria-hidden="true">
     <div class="card">
@@ -164,6 +207,7 @@
       <button class="btn big" id="btnNextBarn">On to the next barn</button>
       <button class="btn ghost" id="btnWinShop">Spend coins first</button>
       <button class="btn ghost" id="btnWinFarmer">My Farmer</button>
+      <button class="btn ghost" id="btnWinRetire" hidden>🏅 Retire the farm</button>
     </div>
   </section>
 </div>
@@ -192,6 +236,16 @@
   setTimeout(dismissBoot, 4000);
   window.politeCarrotBootReady = function () { ready = true; maybeDismiss(); };
 })();
+</script>
+<script>
+/* Installable, and playable with no signal once it has been opened. The
+   worker only exists over http(s) — from a file:// copy there is nothing to
+   register against. */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* fine without it */ });
+  });
+}
 </script>
 <script src="vendor/three.min.js"></script>
 <script src="js/audio.js"></script>

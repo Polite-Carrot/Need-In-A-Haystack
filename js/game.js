@@ -51,6 +51,9 @@ NIAH.game = (function () {
   const D = NIAH.data;
   const SAVE_KEY = 'niah.save.v2';
   const LETTERS = 'ABCDEFGHIJKL';
+  const RETIRE_AT = 8;            // earliest barn you are allowed to retire from
+  const OFFLINE_CAP = 4 * 3600;   // the crew work at most four hours unattended
+  const OFFLINE_MIN = 120;        // under two minutes away is not worth a card
   const T = THREE;
 
   /* ---------------------------------------------------------- state */
@@ -65,6 +68,11 @@ NIAH.game = (function () {
     needles: 0,
     totalHay: 0,
     totalLoads: 0,
+    junkFound: 0,
+    shelf: {},                 // junk id -> { n, first } : the Barn Shelf
+    shelfDone: false,
+    prestige: { rosettes: 0, retires: 0, best: 0 },
+    lastSeen: Date.now(),
     started: Date.now(),
     camera: 'follow',
     muted: false,
@@ -84,16 +92,26 @@ NIAH.game = (function () {
   /* ------------------------------------------------------- economy */
 
   const shovel = () => D.SHOVELS[state.shovel];
-  const capacity = () => shovel().cap;
-  const digRate = () => shovel().dig;
+  const rosettes = () => (state.prestige && state.prestige.rosettes) || 0;
+
+  /* A rosette is worth three things, because coins alone would not carry a
+     restarted farm: the shovels are gated by barn, not by price, so a coin
+     bonus on its own leaves you re-digging barns 1-8 bare-handed. */
+  const prestigeMult = () => 1 + 0.1 * rosettes();          // coins
+  const prestigeGrunt = () => 1 + 0.05 * rosettes();        // dig rate and load
+  const prestigeSkip = () => Math.floor(rosettes() / 8);    // barns off every unlock
+
+  const capacity = () => Math.round(shovel().cap * prestigeGrunt());
+  const digRate = () => shovel().dig * prestigeGrunt();
   const moveSpeed = () => 6 * (1 + state.gear.boots * 0.14);
-  const coinsPerHay = () => Math.pow(1.25, state.gear.sift) * Math.pow(1.85, state.level - 1);
+  const unlockAt = (sh) => Math.max(1, sh.unlock - prestigeSkip());
+  const coinsPerHay = () => Math.pow(1.25, state.gear.sift) * Math.pow(1.85, state.level - 1) * prestigeMult();
   const pileCount = (lvl) => Math.min(4 + Math.floor((lvl - 1) * 1.2), 12);
   const pileHay = (lvl) => Math.round(55 * Math.pow(1.5, lvl - 1));
   const gearPrice = (k) => Math.floor(D.GEAR[k].base * Math.pow(D.GEAR[k].growth, state.gear[k]));
 
   function affordable() {
-    const next = D.SHOVELS.findIndex((s, i) => !state.owned.includes(i) && s.unlock <= state.level);
+    const next = D.SHOVELS.findIndex((s, i) => !state.owned.includes(i) && unlockAt(s) <= state.level);
     if (next >= 0 && state.coins >= D.SHOVELS[next].price) return true;
     return Object.keys(D.GEAR).some((k) => state.gear[k] < D.GEAR[k].max && state.coins >= gearPrice(k));
   }
@@ -101,6 +119,7 @@ NIAH.game = (function () {
   /* ---------------------------------------------------- persistence */
 
   function save() {
+    state.lastSeen = Date.now();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
   }
   function readSave() {
@@ -132,6 +151,11 @@ NIAH.game = (function () {
         revealed: false,
       };
     }
+    // saves from before the Barn Shelf counted odds and ends as one number
+    state.shelf = (data.shelf && typeof data.shelf === 'object') ? data.shelf : {};
+    state.junkFound = data.junkFound || 0;
+    state.shelfDone = !!data.shelfDone;
+    state.prestige = Object.assign({ rosettes: 0, retires: 0, best: 0 }, data.prestige || {});
     if (!Array.isArray(state.owned) || !state.owned.length) state.owned = [0];
     state.shovel = Math.max(0, Math.min(D.SHOVELS.length - 1, state.shovel | 0));
     NIAH.audio.muted = !!state.muted;
@@ -379,13 +403,132 @@ NIAH.game = (function () {
       state.coins += coins;
       state.junkFound = (state.junkFound || 0) + 1;
       lv.junkFound = (lv.junkFound || 0) + 1;
+      const firstEver = shelfAdd(t.id);
       const pos = NIAH.world.clearJunkMesh(j.id);
       if (pos) NIAH.world.hayBurst(pos.x, pos.y + 0.4, pos.z, 5);
       NIAH.audio.coin();
       NIAH.ui.bumpCoins();
-      NIAH.ui.toast(t.emoji + ' ' + t.name + '  +' + NIAH.ui.fmt(coins) + '  ·  ' + t.line);
+      NIAH.ui.toast(t.emoji + ' ' + t.name + '  +' + NIAH.ui.fmt(coins)
+        + (firstEver ? '  ·  new on the shelf!' : '  ·  ' + t.line));
+      checkShelfComplete();
       save();
     });
+  }
+
+  /* --------------------------------------------------------- shelf */
+
+  /* One row per kind of thing you can dig out: how many you have turned up,
+     and the barn the first one came out of. */
+  function shelfAdd(id) {
+    if (!state.shelf) state.shelf = {};
+    const rec = state.shelf[id] || (state.shelf[id] = { n: 0, first: 0 });
+    const firstEver = rec.n === 0;
+    rec.n++;
+    if (!rec.first) rec.first = state.level;
+    return firstEver;
+  }
+
+  function shelfCount() {
+    return NIAH.data.JUNK.filter((j) => (state.shelf[j.id] || {}).n > 0).length;
+  }
+
+  function shelfComplete() { return shelfCount() >= NIAH.data.JUNK.length; }
+
+  function checkShelfComplete() {
+    if (state.shelfDone || !shelfComplete()) return;
+    state.shelfDone = true;
+    const bonus = Math.max(2000, Math.floor(1200 * coinsPerHay()));
+    state.coins += bonus;
+    NIAH.audio.fanfare();
+    NIAH.ui.bumpCoins();
+    NIAH.ui.toast('🗄️ Barn Shelf complete — 🪙 ' + NIAH.ui.fmt(bonus) + ' and the Tin Can Hat is yours');
+  }
+
+  /* ------------------------------------------------------- prestige */
+
+  const retireGain = () => Math.max(0, state.level - 1);
+  const canRetire = () => state.level >= RETIRE_AT;
+
+  /* Hand the farm on: the barns, the coins, the shovels and the gear all go;
+     the wardrobe and the shelf stay. One rosette per needle found, and they
+     pay out for good in coins, dig rate and earlier shovel unlocks. */
+  function retire() {
+    if (!canRetire()) { NIAH.audio.nope(); return; }
+    const gain = retireGain();
+    state.prestige.rosettes += gain;
+    state.prestige.retires++;
+    state.prestige.best = Math.max(state.prestige.best || 0, state.level);
+    state.coins = 0;
+    state.shovel = 0;
+    state.owned = [0];
+    state.gear = { boots: 0, sense: 0, sift: 0, hands: 0 };
+    state.level = 1;
+    state.lv = makeLevel(1);
+    NIAH.helpers.sync(0);
+    NIAH.ui.screen('retire', false);
+    NIAH.ui.screen('pause', false);
+    NIAH.ui.screen('win', false);
+    NIAH.ui.screen('menu', false);
+    NIAH.ui.closeShop();
+    NIAH.audio.fanfare();
+    save();
+    startLevel(true);
+  }
+
+  function openRetire() {
+    NIAH.ui.showRetire({
+      can: canRetire(),
+      at: RETIRE_AT,
+      level: state.level,
+      gain: retireGain(),
+      rosettes: rosettes(),
+      mult: prestigeMult(),
+      nextMult: 1 + 0.1 * (rosettes() + retireGain()),
+      grunt: prestigeGrunt(),
+      nextGrunt: 1 + 0.05 * (rosettes() + retireGain()),
+      skip: prestigeSkip(),
+      nextSkip: Math.floor((rosettes() + retireGain()) / 8),
+      retires: state.prestige.retires,
+    });
+  }
+
+  /* ------------------------------------------------ offline farmhands */
+
+  let offlinePot = 0;
+
+  /* Farmhands keep working the yard while the game is shut — they never touch
+     your piles, so the barn is exactly as you left it.
+
+     The yield is measured in barns, not in seconds times dig rate: at a late
+     shovel that second figure runs to a hundred barns of coins for one night
+     away, which would undo the whole economy. One hand bales 8% of the barn
+     you are on per hour, it stops at one barn's worth, and after four hours
+     they go home. */
+  function offlineEarnings(saved) {
+    if (!saved || !saved.lastSeen) return null;
+    const hands = (saved.gear && saved.gear.hands) || 0;
+    if (hands <= 0) return null;
+    const secs = Math.min(Math.max(0, (Date.now() - saved.lastSeen) / 1000), OFFLINE_CAP);
+    if (secs < OFFLINE_MIN) return null;
+    const barnHay = pileHay(state.level) * pileCount(state.level);
+    const hay = Math.min(barnHay * 0.08 * hands * (secs / 3600), barnHay);
+    const coins = Math.floor(hay * coinsPerHay());
+    if (coins < 1) return null;
+    return {
+      secs: Math.round(secs), coins, hands,
+      barns: hay / barnHay,
+      capped: secs >= OFFLINE_CAP - 1 || hay >= barnHay - 0.001,
+    };
+  }
+
+  function claimOffline() {
+    if (offlinePot <= 0) return;
+    state.coins += offlinePot;
+    offlinePot = 0;
+    NIAH.audio.coin();
+    NIAH.ui.bumpCoins();
+    NIAH.ui.clearOffline();
+    save();
   }
 
   function needleInReach() {
@@ -584,6 +727,7 @@ NIAH.game = (function () {
         ['Piles opened', lv.opened + ' of ' + lv.piles.length],
         ['Odds and ends', (lv.junkFound || 0) + ' dug up'],
         ['Time in the barn', secs < 60 ? secs + 's' : Math.floor(secs / 60) + 'm ' + (secs % 60) + 's'],
+        ['Barn Shelf', shelfCount() + ' of ' + NIAH.data.JUNK.length + ' kinds'],
         ['Next barn pays', '×1.85 coins'],
       ],
     });
@@ -619,6 +763,7 @@ NIAH.game = (function () {
     NIAH.ui.closeShop();
     NIAH.ui.hudOn(false);
     NIAH.ui.setMenu(readSave());
+    NIAH.ui.setOffline(null);
     NIAH.ui.screen('menu', true);
   }
 
@@ -637,7 +782,7 @@ NIAH.game = (function () {
       if (state.lv && state.lv.loadTotal > capacity()) trimLoad();
       NIAH.audio.buy();
     } else {
-      if (state.level < sh.unlock || state.coins < sh.price) { NIAH.audio.nope(); return; }
+      if (state.level < unlockAt(sh) || state.coins < sh.price) { NIAH.audio.nope(); return; }
       state.coins -= sh.price;
       state.owned.push(i);
       state.shovel = i;
@@ -684,9 +829,27 @@ NIAH.game = (function () {
     return (state.wardrobe[kind] || []).includes(id);
   }
 
+  /* Most kit unlocks by barn; a couple of pieces are rewards instead —
+     `need: 'shelf'` for a full Barn Shelf, `need: <n>` for n retirements. */
   function cosmeticLocked(kind, id) {
     const item = NIAH.cosmetics.byId(NIAH.cosmetics.listFor(kind), id);
+    if (item.need === 'shelf') return !state.shelfDone;
+    if (typeof item.need === 'number') return (state.prestige.retires || 0) < item.need;
     return !!item.unlock && state.level < item.unlock;
+  }
+
+  /* What the locked chip says, and what the footer says when you tap it. */
+  function cosmeticGate(kind, id) {
+    const item = NIAH.cosmetics.byId(NIAH.cosmetics.listFor(kind), id);
+    if (item.need === 'shelf') {
+      return { tag: 'Shelf', why: 'Fill the Barn Shelf — every odd and end, once — to unlock ' + item.name + '.' };
+    }
+    if (typeof item.need === 'number') {
+      const n = item.need;
+      return { tag: n === 1 ? 'Retire' : 'Retire ×' + n,
+               why: 'Retire the farm ' + (n === 1 ? 'once' : n + ' times') + ' to unlock ' + item.name + '.' };
+    }
+    return { tag: 'Barn ' + item.unlock, why: 'Clear barn ' + item.unlock + ' to unlock ' + item.name + '.' };
   }
 
   function buyCosmetic(kind, id) {
@@ -714,6 +877,8 @@ NIAH.game = (function () {
     NIAH.ui.screen('menu', false);
     NIAH.ui.screen('pause', false);
     NIAH.ui.screen('win', false);
+    NIAH.ui.screen('shelf', false);
+    NIAH.ui.screen('retire', false);
     NIAH.ui.hudOn(false);
     NIAH.ui.screen('wardrobe', true);
     NIAH.ui.syncOutfitCat();
@@ -1001,12 +1166,15 @@ NIAH.game = (function () {
     const saved = readSave();
     if (saved) applySave(saved);
     if (!state.lv) state.lv = makeLevel(state.level);
+    const away = saved ? offlineEarnings(saved) : null;
+    offlinePot = away ? away.coins : 0;
 
     buildWorldForLevel();
     const L = NIAH.world.layout;
     NIAH.player.place(0, L.doorZ + 9, Math.PI);
     NIAH.ui.setCameraLabel(state.camera);
     NIAH.ui.setMenu(saved);
+    NIAH.ui.setOffline(away);
     bindInput(canvas);
 
     phase = 'menu';
@@ -1024,8 +1192,10 @@ NIAH.game = (function () {
   return {
     state, startNewGame, continueGame, nextBarn, quitToMenu, pause, skipIntro,
     buyShovel, buyGear, gearPrice, toggleSound, toggleCamera, wipeSave,
-    openWardrobe, closeWardrobe, buyCosmetic, ownsCosmetic, cosmeticLocked,
+    openWardrobe, closeWardrobe, buyCosmetic, ownsCosmetic, cosmeticLocked, cosmeticGate,
     capacity, digRate, coinsPerHay, moveSpeed,
+    retire, openRetire, canRetire, retireGain, prestigeMult, prestigeGrunt, rosettes, unlockAt,
+    shelfCount, shelfComplete, claimOffline,
     get phase() { return phase; },
   };
 })();

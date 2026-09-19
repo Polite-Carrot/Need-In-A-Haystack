@@ -24,7 +24,9 @@ NIAH.ui = (function () {
       'pileFill', 'shovelName', 'loadText', 'loadFill', 'prompt', 'shopBody', 'shopCoins',
       'shopDot', 'stick', 'stickKnob', 'actionBtn', 'introNumber', 'introSub', 'statsList',
       'winText', 'winStats', 'btnContinue', 'continueLabel', 'btnWipe', 'menuSound',
-      'btnCamera', 'btnSound',
+      'btnCamera', 'btnSound', 'prestigeLine', 'offlineCard', 'offlineText', 'offlineCoins',
+      'btnMenuRetire', 'btnPauseRetire', 'btnWinRetire', 'retire', 'retireText', 'retireStats',
+      'shelf', 'shelfGrid', 'shelfSub', 'shelfFoot',
     ].forEach((id) => { E[id] = el(id); });
 
     const G = () => NIAH.game;
@@ -50,6 +52,17 @@ NIAH.ui = (function () {
       renderWardrobe(true);
       NIAH.audio.ui();
     }));
+
+    el('btnMenuShelf').addEventListener('click', () => showShelf());
+    el('btnPauseShelf').addEventListener('click', () => showShelf());
+    el('closeShelf').addEventListener('click', () => screen('shelf', false));
+
+    E.btnMenuRetire.addEventListener('click', () => G().openRetire());
+    E.btnPauseRetire.addEventListener('click', () => G().openRetire());
+    E.btnWinRetire.addEventListener('click', () => G().openRetire());
+    el('closeRetire').addEventListener('click', () => screen('retire', false));
+    el('btnDoRetire').addEventListener('click', () => G().retire());
+    el('btnCollectOffline').addEventListener('click', () => G().claimOffline());
 
     el('btnSkipIntro').addEventListener('click', () => G().skipIntro());
     el('btnShop').addEventListener('click', () => openShop());
@@ -86,6 +99,7 @@ NIAH.ui = (function () {
     node.hidden = false;
     node.classList.toggle('open', !!open);
     node.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (open && (id === 'menu' || id === 'pause' || id === 'win')) syncPrestige();
   }
   function hudOn(on) { E.hud.classList.toggle('on', !!on); E.hud.setAttribute('aria-hidden', on ? 'false' : 'true'); }
 
@@ -161,6 +175,98 @@ NIAH.ui = (function () {
     if (save) E.continueLabel.textContent = 'Barn ' + save.level;
     E.menuSound.textContent = NIAH.audio.muted ? '🔇 Sound off' : '🔊 Sound on';
     E.btnSound.textContent = 'Sound: ' + (NIAH.audio.muted ? 'Off' : 'On');
+    syncPrestige();
+  }
+
+  /* The rosette line and the three Retire buttons all say the same thing, so
+     they are refreshed together whenever a screen that shows one opens. */
+  function syncPrestige() {
+    const G = NIAH.game;
+    if (!G || !G.state) return;
+    const r = G.rosettes();
+    E.prestigeLine.hidden = r <= 0;
+    if (r > 0) {
+      E.prestigeLine.textContent = '🏅 ' + r + ' rosette' + (r === 1 ? '' : 's')
+        + ' · ×' + G.prestigeMult().toFixed(1) + ' coins · ×' + G.prestigeGrunt().toFixed(2) + ' digging';
+    }
+    const show = G.canRetire();
+    E.btnMenuRetire.hidden = !show;
+    E.btnPauseRetire.hidden = !show;
+    E.btnWinRetire.hidden = !show;
+  }
+
+  /* ------------------------------------------------ while you were away */
+
+  function setOffline(away) {
+    if (!away) { E.offlineCard.hidden = true; return; }
+    const mins = Math.round(away.secs / 60);
+    const hrs = Math.floor(mins / 60);
+    const time = mins < 60 ? mins + ' minutes'
+      : mins % 60 === 0 ? hrs + (hrs === 1 ? ' hour' : ' hours')
+      : hrs + 'h ' + (mins % 60) + 'm';
+    E.offlineCard.hidden = false;
+    E.offlineText.textContent = away.hands + (away.hands === 1 ? ' farmhand' : ' farmhands')
+      + ' kept baling in the yard for ' + time + (away.capped ? ', then knocked off.' : '.')
+      + '  That is ' + (away.barns >= 0.995 ? 'a full barn' : Math.round(away.barns * 100) + '% of a barn')
+      + ' worth of hay.';
+    E.offlineCoins.textContent = fmt(away.coins);
+  }
+  function clearOffline() { E.offlineCard.hidden = true; }
+
+  /* ------------------------------------------------------ barn shelf */
+
+  function showShelf() {
+    const G = NIAH.game, s = G.state;
+    const shelf = s.shelf || {};
+    const total = NIAH.data.JUNK.length;
+    const have = G.shelfCount();
+    E.shelfSub.textContent = have + ' of ' + total + ' kinds on the shelf';
+    E.shelfGrid.innerHTML = '';
+    NIAH.data.JUNK.forEach((j) => {
+      const rec = shelf[j.id];
+      const found = !!(rec && rec.n > 0);
+      const d = document.createElement('div');
+      d.className = 'shelf-item' + (found ? '' : ' empty');
+      d.innerHTML = '<div class="shelf-emoji"></div><div class="shelf-info">'
+        + '<div class="shelf-name"></div><div class="shelf-line"></div></div><div class="shelf-count"></div>';
+      d.querySelector('.shelf-emoji').textContent = found ? j.emoji : '❔';
+      d.querySelector('.shelf-name').textContent = found ? j.name : '???';
+      d.querySelector('.shelf-line').textContent = found
+        ? j.line + '  ·  first found in barn ' + (rec.first || '?')
+        : 'Still buried out there somewhere.';
+      d.querySelector('.shelf-count').textContent = found ? '×' + fmt(rec.n) : '';
+      E.shelfGrid.appendChild(d);
+    });
+    E.shelfFoot.textContent = s.shelfDone
+      ? '🏆 Shelf complete — the Tin Can Hat is in My Farmer.'
+      : 'Fill every slot and the Tin Can Hat is yours, plus a one-off bounty.';
+    screen('shelf', true);
+    NIAH.audio.ui();
+  }
+
+  /* --------------------------------------------------------- retire */
+
+  const early = (n) => n === 0 ? 'on time' : n === 1 ? 'a barn early' : n + ' barns early';
+
+  function showRetire(d) {
+    E.retireText.textContent = d.can
+      ? 'Hand the farm on and start again at barn 1. Your coins, shovels and gear all go; your farmer, '
+        + 'your wardrobe and the Barn Shelf stay. Each rosette is +10% coins and +5% digging for good, '
+        + 'and every eight of them brings the shovels forward a barn.'
+      : 'You can retire from barn ' + d.at + ' onwards. Keep digging.';
+    E.retireStats.innerHTML = [
+      ['Retiring from', 'Barn ' + d.level],
+      ['Rosettes earned', '🏅 ' + d.gain],
+      ['Rosettes after', '🏅 ' + (d.rosettes + d.gain)],
+      ['Coins', '×' + d.mult.toFixed(1) + '  →  ×' + d.nextMult.toFixed(1)],
+      ['Digging and load', '×' + d.grunt.toFixed(2) + '  →  ×' + d.nextGrunt.toFixed(2)],
+      ['Shovels come', early(d.skip) + '  →  ' + early(d.nextSkip)],
+      ['Farms handed on', d.retires],
+    ].map((r) => '<div><span>' + r[0] + '</span><span>' + r[1] + '</span></div>').join('');
+    el('btnDoRetire').disabled = !d.can;
+    el('btnDoRetire').textContent = d.can ? 'Hand the farm on' : 'Barn ' + d.at + ' to retire';
+    screen('retire', true);
+    NIAH.audio.ui();
   }
 
   function setCameraLabel(mode) {
@@ -205,12 +311,13 @@ NIAH.ui = (function () {
       NIAH.data.SHOVELS.forEach((sh, i) => {
         const owned = s.owned.includes(i);
         const equipped = s.shovel === i;
-        const gated = s.level < sh.unlock;
+        const at = G.unlockAt(sh);
+        const gated = s.level < at;
         const desc = sh.desc + '  •  holds ' + fmt(sh.cap) + '  •  digs ' + fmt(sh.dig) + ' hay/sec';
         let label, cls = '', btnCls = '', disabled = false;
         if (equipped) { label = 'In hand'; btnCls = 'tag'; disabled = true; cls = 'equipped'; }
         else if (owned) { label = 'Equip'; btnCls = 'equip'; cls = 'owned'; }
-        else if (gated) { label = 'Barn ' + sh.unlock; btnCls = 'tag'; disabled = true; cls = 'locked'; }
+        else if (gated) { label = 'Barn ' + at; btnCls = 'tag'; disabled = true; cls = 'locked'; }
         else { label = '🪙 ' + fmt(sh.price); disabled = s.coins < sh.price; }
         body.appendChild(row({
           emoji: sh.emoji, name: sh.name, desc, cls, label, btnCls, disabled,
@@ -239,7 +346,8 @@ NIAH.ui = (function () {
       info.innerHTML = '<div class="item-emoji">📈</div><div class="item-info"><div class="item-name">Current rates</div><div class="item-desc"></div></div>';
       info.querySelector('.item-desc').textContent =
         fmt(G.capacity()) + ' hay per load · ' + fmt(G.digRate()) + ' hay/sec · ' +
-        (G.coinsPerHay() < 10 ? G.coinsPerHay().toFixed(2) : fmt(G.coinsPerHay())) + ' coins per hay';
+        (G.coinsPerHay() < 10 ? G.coinsPerHay().toFixed(2) : fmt(G.coinsPerHay())) + ' coins per hay' +
+        (G.rosettes() ? ' · 🏅 ×' + G.prestigeMult().toFixed(1) : '');
       body.appendChild(info);
     }
     body.scrollTop = scroll;
@@ -293,13 +401,13 @@ NIAH.ui = (function () {
     const tag = document.createElement('div');
     if (worn) { tag.className = 'kit-tag'; tag.textContent = 'Wearing'; }
     else if (owned) { tag.className = 'kit-tag'; tag.textContent = 'Tap to wear'; }
-    else if (locked) { tag.className = 'kit-tag locked'; tag.textContent = 'Barn ' + item.unlock; }
+    else if (locked) { tag.className = 'kit-tag locked'; tag.textContent = G.cosmeticGate(kind, item.id).tag; }
     else { tag.className = 'kit-tag price'; tag.textContent = '🪙 ' + fmt(item.price); }
     info.append(name, tag);
 
     b.append(sw, info);
     b.addEventListener('click', () => {
-      if (locked) { NIAH.audio.nope(); setWardrobeFoot('Clear barn ' + item.unlock + ' to unlock ' + item.name + '.'); return; }
+      if (locked) { NIAH.audio.nope(); setWardrobeFoot(G.cosmeticGate(kind, item.id).why); return; }
       if (!owned && !canAfford) {
         NIAH.audio.nope();
         setWardrobeFoot(fmt(item.price - state.coins) + ' more coins for ' + item.name + '.');
@@ -380,8 +488,12 @@ NIAH.ui = (function () {
     const rows = [
       ['Needles found', s.needles],
       ['Current barn', '#' + s.level],
+      ['Rosettes', '🏅 ' + G.rosettes() + '  (×' + G.prestigeMult().toFixed(1) + ' coins, ×' + G.prestigeGrunt().toFixed(2) + ' digging)'],
+      ['Farms handed on', (s.prestige && s.prestige.retires) || 0],
+      ['Deepest barn reached', '#' + Math.max(s.level, (s.prestige && s.prestige.best) || 0)],
       ['Hay sifted (all time)', fmt(s.totalHay)],
       ['Odds and ends found', fmt(s.junkFound || 0)],
+      ['Barn Shelf', G.shelfCount() + ' of ' + NIAH.data.JUNK.length + ' kinds'],
       ['Loads carried', fmt(s.totalLoads)],
       ['Coins', fmt(s.coins)],
       ['Shovel', NIAH.data.SHOVELS[s.shovel].name],
@@ -402,7 +514,7 @@ NIAH.ui = (function () {
   return {
     init, screen, hudOn, setHud, setPileCard, setPrompt, setAction, setSense, setIntro,
     setMenu, setCameraLabel, renderShop, openShop, closeShop, shopIsOpen, showStats, showWin, toast,
-    renderWardrobe, syncOutfitCat,
+    renderWardrobe, syncOutfitCat, syncPrestige, setOffline, clearOffline, showRetire, showShelf,
     bumpCoins, fmt,
     get stick() { return E.stick; },
     get stickKnob() { return E.stickKnob; },
